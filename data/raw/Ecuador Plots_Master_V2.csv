@@ -1,0 +1,135 @@
+﻿Plot_ID,PREX,Matrix,Latitude,Longitude,Elevation,Treatment,Treatment2,Regeneration_year
+CA59,NA,NA,0.55730998,-79.179868,165,active cacao,active cacao,NA
+CA60,NA,NA,0.510266,-79.2272,440,active cacao,active cacao,NA
+CA61,NA,NA,0.53400099,-79.18769603,324,active cacao,active cacao,NA
+CA62,PREX,NA,0.511049,-79.212168,372,active cacao,active cacao,NA
+CA63,PREX,NA,0.54401822,-79.14532595,240,active cacao,active cacao,NA
+CA64,PREX,NA,0.54348119,-79.15456,256,active cacao,active cacao,NA
+CR01,NA,NA,0.49654763,-79.17820655,560,cacao regeneration,cacao regeneration early,2017
+CR02,PREX,NA,0.50150484,-79.22593494,400,cacao regeneration,cacao regeneration early,2015
+CR03,NA,NA,0.50821205,-79.23688265,274,cacao regeneration,cacao regeneration early,2018
+CR04,PREX,NA,0.51167917,-79.18947658,560,cacao regeneration,cacao regeneration late,2002
+CR05,PREX,NA,0.51178371,-79.20359237,377,cacao regeneration,cacao regeneration early,2011
+CR06,PREX,NA,0.5206616,-79.21083174,397,cacao regeneration,cacao regeneration late,1990
+CR07,NA,NA,0.45898553,-79.20876011,168,cacao regeneration,cacao regeneration late,2000
+CR08,NA,NA,0.4592528,-79.21039418,172,cacao regeneration,cacao regeneration late,1996
+CR09,PREX,NA,0.47247446,-79.229619,159,cacao regeneration,cacao regeneration early,2017
+CR10,PREX,NA,0.4771745,-79.1995872,347,cacao regeneration,cacao regeneration late,1999
+CR11,PREX,NA,0.47789256,-79.20507128,372,cacao regeneration,cacao regeneration late,2000
+CR12,NA,NA,0.48018456,-79.21406337,324,cacao regeneration,cacao regeneration late,2008
+CR13,PREX,NA,0.48892263,-79.22616164,366,cacao regeneration,cacao regeneration early,2022
+CR14,PREX,NA,0.49816025,-79.13850116,529,cacao regeneration,cacao regeneration late,1985
+CR15,NA,NA,0.504488312,-79.15719613,400,cacao regeneration,cacao regeneration early,2015
+CR16,NA,NA,0.51074639,-79.14442928,479,cacao regeneration,cacao regeneration early,2015
+CR17,NA,NA,0.51478038,-79.14413909,450,cacao regeneration,cacao regeneration early,2014
+CR18,NA,NA,0.53991814,-79.14419755,331,cacao regeneration,cacao regeneration early,2013
+OG28,NA,NA,0.46440563,-79.21261431,224,old-growth forest,old-growth forest,NA
+OG37,NA,NA,0.49819185,-79.17924819,550,old-growth forest,old-growth forest,NA
+OG38,PREX,NA,0.51305713,-79.19321874,535,old-growth forest,old-growth forest,NA
+OG39,PREX,NA,0.52155163,-79.19538539,576,old-growth forest,old-growth forest,NA
+OG40,NA,NA,0.52772307,-79.1724196,531,old-growth forest,old-growth forest,NA
+OG41,PREX,NA,0.52981297,-79.18850563,389,old-growth forest,old-growth forest,NA
+OG42,PREX,NA,0.53843029,-79.17462078,356,old-growth forest,old-growth forest,NA
+OG43,NA,NA,0.46447835,-79.21007388,238,old-growth forest,old-growth forest,NA
+OG44,NA,NA,0.47434948,-79.19810902,339,old-growth forest,old-growth forest,NA
+OG45,PREX,NA,0.47786124,-79.20347555,362,old-growth forest,old-growth forest,NA
+OG46,PREX,NA,0.47797846,-79.19469459,288,old-growth forest,old-growth forest,NA
+OG47,NA,NA,0.48465799,-79.21398287,355,old-growth forest,old-growth forest,NA
+OG48,NA,NA,0.53088989,-79.14462944,299,old-growth forest,old-growth forest,NA
+OG49,PREX,NA,0.5315347,-79.14780642,310,old-growth forest,old-growth forest,NA
+OG50,NA,NA,0.53403036,-79.14419137,316,old-growth forest,old-growth forest,NA
+OG51,NA,NA,0.55223173,-79.1374752,228,old-growth forest,old-growth forest,NA
+OG52,PREX,NA,0.54567888,-79.13756064,225,old-growth forest,old-growth forest,NA
+PA53,NA,NA,0.49585202,-79.20737699,510,active pasture,active pasture,NA
+PA54,PREX,NA,0.53626858,-79.18830126,207,active pasture,active pasture,NA
+PA55,PREX,NA,0.4976111,-79.22452241,426,active pasture,active pasture,NA
+PA56,NA,NA,0.511023,-79.228523,430,active pasture,active pasture,NA
+PA57,PREX,NA,0.51139197,-79.20887752,375,active pasture,active pasture,NA
+PA58,NA,NA,0.543056,-79.153322,243,active pasture,active pasture,NA
+PR19,PREX,NA,0.55271929,-79.17482117,177,pasture regeneration,pasture regeneration early,2017
+PR20,NA,NA,0.49670321,-79.1716609,540,pasture regeneration,pasture regeneration early,2019
+PR21,PREX,NA,0.50802424,-79.18995397,560,pasture regeneration,pasture regeneration late,1987
+PR22,PREX,NA,0.50939341,-79.20450746,400,pasture regeneration,pasture regeneration early,2011
+PR23,PREX,NA,0.5107801,-79.23206464,415,pasture regeneration,pasture regeneration early,2022
+PR24,NA,NA,0.52082042,-79.21365335,381,pasture regeneration,pasture regeneration late,2002
+PR25,NA,NA,0.49555762,-79.17642012,544,pasture regeneration,pasture regeneration early,2017
+PR26,PREX,NA,0.52646596,-79.20464664,325,pasture regeneration,pasture regeneration late,1995
+PR27,NA,NA,0.46185094,-79.2093188,214,pasture regeneration,pasture regeneration late,1996
+PR29,NA,NA,0.47292046,-79.23064005,173,pasture regeneration,pasture regeneration early,2017
+PR30,NA,NA,0.47500835,-79.22913433,219,pasture regeneration,pasture regeneration late,2008
+PR31,PREX,NA,0.47902624,-79.21005517,316,pasture regeneration,pasture regeneration late,2007
+PR32,NA,NA,0.47927521,-79.21729879,339,pasture regeneration,pasture regeneration late,2007
+PR33,PREX,NA,0.48924515,-79.22841178,311,pasture regeneration,pasture regeneration early,2022
+PR34,PREX,NA,0.49350932,-79.13794296,615,pasture regeneration,pasture regeneration late,1985
+PR35,NA,NA,0.5037611,-79.1579992,411,pasture regeneration,pasture regeneration early,2016
+PR36,PREX,NA,0.5165012,-79.14308334,380,pasture regeneration,pasture regeneration early,2014
+CA180,NA,NA,0.54739997,-79.16572002,246,active cacao,active cacao,NA
+CA181,NA,NA,0.54063804,-79.14442898,274,active cacao,active cacao,NA
+CA182,NA,NA,0.55604397,-79.17790798,169,active cacao,active cacao,NA
+CA183,NA,NA,0.55407599,-79.18765697,147,active cacao,active cacao,NA
+CA184,NA,NA,0.47076196,-79.23226504,149,active cacao,active cacao,NA
+CA185,NA,NA,0.46492,-79.214,172,active cacao,active cacao,NA
+CA186,NA,NA,0.53855,-79.18964,186,active cacao,active cacao,NA
+CA187,NA,NA,0.46565,-79.214167,160,active cacao,active cacao,NA
+CR100,NA,NA,0.51851,-79.15507,355,cacao regeneration,cacao regeneration early,2014
+CR101,NA,NA,0.47446,-79.23122,156,cacao regeneration,cacao regeneration late,2010
+CR102,NA,NA,0.52555203,-79.20633797,315,cacao regeneration,cacao regeneration late,2009
+CR103,NA,NA,0.53609,-79.18956,204,cacao regeneration,cacao regeneration late,2010
+CR104,NA,NA,0.54322,-79.13206,331,cacao regeneration,cacao regeneration early,2015
+CR105,NA,NA,0.518383,-79.155067,367,cacao regeneration,cacao regeneration early,2014
+CR106,NA,NA,0.52463497,-79.212787,339,cacao regeneration,cacao regeneration early,2009
+OG140,NA,NA,0.53842899,-79.14398097,347,old-growth forest,old-growth forest,NA
+OG141,NA,NA,0.53516499,-79.14297396,310,old-growth forest,old-growth forest,NA
+OG142,NA,NA,0.54492597,-79.13648201,205,old-growth forest,old-growth forest,NA
+OG143,NA,NA,0.544846,-79.14174702,221,old-growth forest,old-growth forest,NA
+OG144,NA,NA,0.53309399,-79.17252302,499,old-growth forest,old-growth forest,NA
+OG145,NA,NA,0.52878804,-79.17346003,528,old-growth forest,old-growth forest,NA
+OG146,NA,NA,0.52631697,-79.16819301,507,old-growth forest,old-growth forest,NA
+OG147,NA,NA,0.46402,-79.2135,238,old-growth forest,old-growth forest,NA
+OG148,NA,NA,0.488081,-79.218927,514,old-growth forest,old-growth forest,NA
+OG149,NA,NA,0.54076192,-79.13480303,450,old-growth forest,old-growth forest,NA
+OG150,NA,NA,0.521667,-79.200717,519,old-growth forest,old-growth forest,NA
+OG151,NA,NA,0.52195,-79.19735,566,old-growth forest,old-growth forest,NA
+OG152,NA,NA,0.5199,-79.194417,547,old-growth forest,old-growth forest,NA
+OG153,NA,NA,0.52370399,-79.16548499,520,old-growth forest,old-growth forest,NA
+OG154,NA,NA,0.47132,-79.19949,328,old-growth forest,old-growth forest,NA
+PA160,NA,NA,0.50638304,-79.14550002,454,active pasture,active pasture,NA
+PA161,NA,NA,0.55567299,-79.18341103,141,active pasture,active pasture,NA
+PA162,NA,NA,0.55133401,-79.194739,139,active pasture,active pasture,NA
+PA163,NA,NA,0.47615,-79.23189,131,active pasture,active pasture,NA
+PA164,NA,NA,0.46414,-79.21372,201,active pasture,active pasture,NA
+PA165,NA,NA,0.55091,-79.20149,127,active pasture,active pasture,NA
+PA166,NA,NA,0.54190404,-79.14888304,266,active pasture,active pasture,NA
+PA167,NA,NA,0.54056704,-79.14665597,277,active pasture,active pasture,NA
+PA168,NA,NA,0.4642,-79.2137,209,active pasture,active pasture,NA
+PA169,NA,NA,0.550917,-79.2015,127,active pasture,active pasture,NA
+PR120,NA,NA,0.51878,-79.15507,368,pasture regeneration,pasture regeneration early,2014
+PR121,NA,NA,0.51194502,-79.14422404,458,pasture regeneration,pasture regeneration early,2017
+PR122,NA,NA,0.51316,-79.14328,461,pasture regeneration,pasture regeneration early,2017
+PR123,NA,NA,0.55137299,-79.17388097,191,pasture regeneration,pasture regeneration early,2017
+PR124,NA,NA,0.46305,-79.20812,259,pasture regeneration,pasture regeneration late,1996
+PR125,NA,NA,0.47777,-79.20862,347,pasture regeneration,pasture regeneration late,1999
+PR126,NA,NA,0.47457498,-79.23269503,143,pasture regeneration,pasture regeneration late,2008
+PR127,NA,NA,0.52508902,-79.21145,344,pasture regeneration,pasture regeneration late,2006
+PR128,NA,NA,0.502809,-79.187005,563,pasture regeneration,pasture regeneration late,1987
+PR129,NA,NA,0.47849,-79.20133,318,pasture regeneration,pasture regeneration early,
+CAZ01,NA,Matrix,0.412866,-79.259515,150,active cacao,active cacao,NA
+CAZ05,NA,Matrix,0.426547,-79.24618,160,active cacao,active cacao,NA
+CAZ07,NA,Matrix,0.399314,-79.25305,170,active cacao,active cacao,NA
+CAZ12,NA,Matrix,0.421661,-79.235676,167,active cacao,active cacao,NA
+CAZ14,NA,Matrix,0.41128,-79.265714,148,active cacao,active cacao,NA
+CAZ17,NA,Matrix,0.407272,-79.2509,163,active cacao,active cacao,NA
+OGZ04,NA,Matrix,0.409508,-79.253342,160,old-growth forest,old-growth forest,NA
+OGZ09,NA,Matrix,0.395029,-79.25339,170,old-growth forest,old-growth forest,NA
+OGZ10,NA,Matrix,0.433639,-79.235779,165,old-growth forest,old-growth forest,NA
+OGZ13,NA,Matrix,0.423632,-79.261471,145,old-growth forest,old-growth forest,NA
+OGZ20,NA,Matrix,0.461047,-79.1438,172,old-growth forest,old-growth forest,NA
+OGZ21,NA,Matrix,0.377547,-79.155161,170,old-growth forest,old-growth forest,NA
+OGZ22,NA,Matrix,0.466516,-79.098848,180,old-growth forest,old-growth forest,NA
+OGZ23,NA,Matrix,0.456369,-79.114619,180,old-growth forest,old-growth forest,NA
+OGZ25,NA,Matrix,0.456803,-79.13897,180,old-growth forest,old-growth forest,NA
+PAZ03,NA,Matrix,0.405142,-79.253342,180,active pasture,active pasture,NA
+PAZ07,NA,Matrix,0.390332,-79.254313,172,active pasture,active pasture,NA
+PAZ11,NA,Matrix,0.427912,-79.236187,166,active pasture,active pasture,NA
+PAZ15,NA,Matrix,0.405708,-79.265578,160,active pasture,active pasture,NA
+PAZ18,NA,Matrix,0.417119,-79.216108,173,active pasture,active pasture,NA

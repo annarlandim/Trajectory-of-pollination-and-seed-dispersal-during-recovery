@@ -3,29 +3,27 @@
 library(dplyr)
 library(tidyr)
 
-setwd("C:/Users/arlandim/Dropbox (Senckenberg)/Postdoc BikF/Multifunctionality/Data and code_MF_recovery/")
+#### Interactions ####
 
-#### interactions ####
-
-master <- read.csv(file = "Ecuador Plots_Master_V2.csv")
+master <- read.csv(file = "data/raw/Ecuador Plots_Master_V2.csv")
 master$RegTime <- 2023 - master$Regeneration_year
 master$RegTime[master$Treatment == "active cacao"] <- 0
 master$RegTime[master$Treatment == "active pasture"] <- 0
-master$RegTime[master$Treatment == "old-growth forest"] <- 0
+master$RegTime[master$Treatment == "old-growth forest"] <- 55
 
 regtime <- master %>% select(Plot_ID, RegTime)
   
-int_do <- read.csv(file = "SP4/int_direct.obs_org.csv")
+int_do <- read.csv(file = "data/raw/SP4/int_direct.obs_org.csv")
 int_do$Plot_ID <- as.factor(int_do$Plot_ID)
 int_do$Treatment2 <- as.factor(int_do$Treatment2)
 int_do <- int_do %>% select(Plot_ID, taxon, animal_species, plant_species, type, unit, RegTime, Treatment2, method)
 
-int_ct <- read.csv(file = "SP4/int_camera.trap_org.csv")
+int_ct <- read.csv(file = "data/raw/SP4/int_camera.trap_org.csv")
 int_ct$Plot_ID <- as.factor(int_ct$Plot_ID)
 int_ct$Treatment2 <- as.factor(int_ct$Treatment2)
 int_ct <- int_ct %>% select(Plot_ID, taxon, animal_species, plant_species, type, unit, RegTime, Treatment2, method)
 
-int_bat <- read.csv(file = "SP4/Bat - Seed_ Interaction_SE.csv")
+int_bat <- read.csv(file = "data/raw/SP4/Bat - Seed_ Interaction_SE.csv")
 int_bat$Plot_ID <- as.factor(int_bat$Plot_ID)
 int_bat$Legacy_7G <- as.factor(int_bat$Legacy_7G)
 int_bat <- int_bat %>%  
@@ -36,7 +34,7 @@ int_bat <- int_bat %>%
 
 int_bat[int_bat$animal_species == "Sturnia_luisi", "animal_species"] <- "Sturnira_luisi"
 
-freq_bat <- read.csv(file = "SP4/Bats_plots_ SE.csv")
+freq_bat <- read.csv(file = "data/raw/SP4/Bats_plots_ SE.csv")
 freq_bat_long <- freq_bat %>%
   pivot_longer(
     -Plot_ID,
@@ -51,7 +49,7 @@ int_bat <- int_bat %>%
 
 #### Plant names ####
 
-Plants <- read.csv(file = "SP4/traits_plants_org.csv")[-c(1:3),-1]
+Plants <- read.csv(file = "data/raw/SP4/traits_plants_org.csv")[-c(1:3),-1]
 Plants[Plants$species=="Nectandra_purpurea_cf.", "species"] <- "Nectandra_purpurea"
 Plants[Plants$species=="Osteophloeum_platis_cf.", "species"] <- "Osteophloeum_platyspermum"
 Plants[Plants$species=="Miconia_'alargada tres venas abajo'", "species"] <- "Miconia_multiplicata"
@@ -95,6 +93,7 @@ Plants[Plants$species=="Tabebuia_rosea", "species"] <- "Handroanthus_chrysanthus
 Plants[Plants$species=="Cordia_cf._'achiote'", "species"] <- "Bixa_orellana"
 Plants[Plants$species=="Piper_pseudonobile", "species"] <- "Piper_pequeina"
 Plants[Plants$species=="Piperacea_sp3", "species"] <- "Piper_pequeina"
+
 
 int_do[int_do$plant_species=="Nectandra_purpurea_cf.", "plant_species"] <- "Nectandra_purpurea"
 int_do[int_do$plant_species=="Osteophloeum_platis_cf.", "plant_species"] <- "Osteophloeum_platyspermum"
@@ -243,6 +242,8 @@ int_bat[int_bat$Seed_Morpho=="M_91", "plant_species"] <- "Piper_grande"
 int_bat[int_bat$Seed_Morpho=="M_95", "plant_species"] <- "Trema_micrantha"
 int_bat[int_bat$Seed_Morpho=="M_98", "plant_species"] <- "Miconia_multiplicata"
 int_bat[int_bat$Seed_Morpho=="M_99", "plant_species"] <- "Piptocoma_discolor"
+int_bat[int_bat$plant_species =="Bunchosia_cornifolia", "plant_species"] <- "Bunchosia_nitida"
+int_bat[int_bat$plant_species =="Conostegia_cuatrecasasii", "plant_species"] <- "Miconia_conocuatrecasii"
 
 #### Habitat types ####
 
@@ -267,6 +268,7 @@ int_bat <- int_bat %>%
     Treatment2 %in% c("Cacao", "Pasture") ~ "regeneration early",
     Treatment2 %in% c("CR_early", "PR_early") ~ "regeneration early",
     Treatment2 %in% c("CR_late", "PR_late") ~ "regeneration late",
+    Treatment2 %in% "Old_growth" ~ "old-growth forest",
     TRUE ~ as.character(Treatment2) 
   )))
 
@@ -287,13 +289,13 @@ int_bat <- int_bat %>% distinct(Plot_ID, animal_species, plant_species, .keep_al
 
 #### Traits ####
 
-traits_do <- read.csv(file = "SP4/traits_direct.obs_org.csv")
+traits_do <- read.csv(file = "data/raw/SP4/traits_direct.obs_org.csv")
 traits_do$Plot_ID <- as.factor(traits_do$Plot_ID)
 
-traits_ct <- read.csv(file = "SP4/traits_cam.trap_org.csv")
+traits_ct <- read.csv(file = "data/raw/SP4/traits_cam.trap_org.csv")
 traits_ct$Plot_ID <- as.factor(traits_ct$Plot_ID)
 
-traits_bat <- read.csv(file = "SP4/Functional_Bat_matrix_SE.csv")
+traits_bat <- read.csv(file = "data/raw/SP4/Functional_Bat_matrix_SE.csv")
 traits_bat <- traits_bat %>% rename(animal_species = specie, GapeWidth = JW, HWIndex = HWI, BodyMass = W) %>%
   select(animal_species, GapeWidth, HWIndex, BodyMass)
 
@@ -332,6 +334,11 @@ traits_nf <- do_ct_traits %>%
 
 Plants <- Plants %>%
   select(species, trait, value_numeric)
+
+bat_plants <- read.csv("data/raw/Bat_plants.csv")
+
+bat_plants <- bat_plants %>% 
+  transmute(plant_species, FruitWidth, Height, CropMass = NA_real_)
 
 fruit_width <- Plants %>%
   filter(trait == "FruitWidth") %>%
@@ -372,14 +379,35 @@ crop_mass <- plants_joined %>%
 traits_plants <- data.frame(plant_species = unique(Plants$species)) %>%
   left_join(fruit_width, by = "plant_species") %>%
   left_join(height, by = "plant_species") %>%
-  left_join(crop_mass, by = "plant_species")
+  left_join(crop_mass, by = "plant_species") %>%
+  bind_rows(bat_plants)
 
-# write.csv(int_birds, "int_birds.csv", row.names = F)
-# write.csv(int_bats, "int_bats.csv", row.names = F)
-# write.csv(int_nf, "int_nf.csv", row.names = F)
+# write.csv(int_birds, file = here::here("data", "processed", "int_birds.csv"), row.names = F)
+# write.csv(int_bat, file = here::here("data", "processed", "int_bats.csv"), row.names = F)
+# write.csv(int_nf, file = here::here("data", "processed", "int_nf.csv"), row.names = F)
 # 
-# write.csv(traits_birds, "traits_birds.csv", row.names = F)
-# write.csv(traits_bat, "traits_bats.csv", row.names = F)
-# write.csv(traits_nf, "traits_nf.csv", row.names = F)
-# write.csv(traits_plants, "traits_plants.csv", row.names = F)
+# write.csv(traits_birds, file = here::here("data", "processed", "traits_birds.csv"), row.names = F)
+# write.csv(traits_bat, file = here::here("data", "processed","traits_bats.csv"), row.names = F)
+# write.csv(traits_nf, file = here::here("data", "processed", "traits_nf.csv"), row.names = F)
+# write.csv(traits_plants, file = here::here("data", "processed", "traits_plants.csv"), row.names = F)
 
+#### Vegetation structure ####
+
+rec <- read.csv("data/raw/Table S4.csv")
+con <- read.csv("data/raw/Felicity_data.csv")
+vvh <- read.csv("data/raw/verticalVH.csv")
+
+env_variables <- master[c(1:20, 22:62,64),] %>% 
+  left_join(select(vvh, Plot_ID, VerticalVH), by = "Plot_ID") %>%
+  left_join(select(rec, Plot_ID, Max_tree_height, AGB_all, AGB_wild, sr_all, sr_wild), by = "Plot_ID") %>%
+  left_join(select(con, Plot_ID, Forest_1km, Forest_500m, Forest_100m, Distance_forest, Distance_edge, Patch_ha, Cacao_1km, Cacao_Reg1_1km, Cacao_Reg2_1km, Pasture_1km, Pasture_Reg1_1km, Pasture_Reg2_1km), by = "Plot_ID")
+
+env_variables <- env_variables %>%
+  mutate(Treatment3 = as.factor(case_when(
+    Treatment2 %in% c("active cacao", "active pasture") ~ "regeneration early",
+    Treatment2 %in% c("cacao regeneration early", "pasture regeneration early") ~ "regeneration early",
+    Treatment2 %in% c("cacao regeneration late", "pasture regeneration late") ~ "regeneration late",
+    TRUE ~ as.character(Treatment2) 
+  )))
+
+# write.csv(env_variables, file = here::here("data", "processed", "env_variables.csv"), row.names = F)

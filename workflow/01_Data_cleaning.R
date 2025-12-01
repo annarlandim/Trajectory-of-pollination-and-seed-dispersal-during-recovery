@@ -2,6 +2,7 @@
 
 library(dplyr)
 library(tidyr)
+library(stringr)
 
 #### Interactions ####
 
@@ -12,6 +13,28 @@ master$RegTime[master$Treatment == "active pasture"] <- 0
 master$RegTime[master$Treatment == "old-growth forest"] <- 55
 
 regtime <- master %>% select(Plot_ID, RegTime)
+
+#### Pollination
+
+int_pol <- read.csv(file = "data/raw/SP3/network.csv") 
+
+int_pol[int_pol$stratum=="Understrory", "stratum"] <- "Understory"
+
+int_pol <- int_pol %>%
+  filter(!str_detect(polSpecies, regex("NN|NIC", ignore_case = TRUE))) %>%
+  rename(Plot_ID = plot, method = stratum,  animal_species = polSpecies, plant_species = ASV) %>%
+  mutate(taxon = case_when(str_starts(polGroup, "Apidae") | str_starts(polGroup, "Colletidae") | str_starts(polGroup, "Halictidae") ~ "Hymenoptera",
+                           str_starts(polGroup, "Megachilidae") | str_starts(polGroup, "Moth") ~ "Lepidoptera",
+                           polGroup == "Bats" ~ "Chiroptera")) %>%
+  mutate(type = "pollen_transport", unit = "pollen") %>%
+  left_join(select(master, Plot_ID, RegTime, Treatment2), by = "Plot_ID") %>%
+  uncount(weights = weight_100) %>% # this is relative abundance*100
+  select(Plot_ID, taxon, animal_species, plant_species, type, unit, RegTime, Treatment2, method)
+
+int_pol$Plot_ID <- as.factor(int_pol$Plot_ID)
+int_pol$Treatment2 <- as.factor(int_pol$Treatment2)
+
+##### Seed dispersal 
   
 int_do <- read.csv(file = "data/raw/SP4/int_direct.obs_org.csv")
 int_do$Plot_ID <- as.factor(int_do$Plot_ID)
@@ -93,7 +116,6 @@ Plants[Plants$species=="Tabebuia_rosea", "species"] <- "Handroanthus_chrysanthus
 Plants[Plants$species=="Cordia_cf._'achiote'", "species"] <- "Bixa_orellana"
 Plants[Plants$species=="Piper_pseudonobile", "species"] <- "Piper_pequeina"
 Plants[Plants$species=="Piperacea_sp3", "species"] <- "Piper_pequeina"
-
 
 int_do[int_do$plant_species=="Nectandra_purpurea_cf.", "plant_species"] <- "Nectandra_purpurea"
 int_do[int_do$plant_species=="Osteophloeum_platis_cf.", "plant_species"] <- "Osteophloeum_platyspermum"
@@ -245,7 +267,15 @@ int_bat[int_bat$Seed_Morpho=="M_99", "plant_species"] <- "Piptocoma_discolor"
 int_bat[int_bat$plant_species =="Bunchosia_cornifolia", "plant_species"] <- "Bunchosia_nitida"
 int_bat[int_bat$plant_species =="Conostegia_cuatrecasasii", "plant_species"] <- "Miconia_conocuatrecasii"
 
-#### Habitat types ####
+# Habitat types 
+
+int_pol <- int_pol %>%
+  mutate(Treatment3 = as.factor(case_when(
+    Treatment2 %in% c("active cacao", "active pasture") ~ "regeneration early",
+    Treatment2 %in% c("cacao regeneration early", "pasture regeneration early") ~ "regeneration early",
+    Treatment2 %in% c("cacao regeneration late", "pasture regeneration late") ~ "regeneration late",
+    TRUE ~ as.character(Treatment2) 
+  )))
 
 int_do <- int_do %>%
   mutate(Treatment3 = as.factor(case_when(
@@ -280,14 +310,23 @@ Plants <- Plants %>%
     TRUE ~ as.character(Treatment2) 
   )))
 
-#### Organizing per functional group ####
+# Organizing per functional group AND removing interaction frequency
+
+int_bees <- int_pol %>% filter(taxon == "Hymenoptera")  %>% distinct(Plot_ID, animal_species, plant_species, .keep_all = TRUE)
+int_moths <- int_pol %>% filter(taxon == "Lepidoptera")  %>% distinct(Plot_ID, animal_species, plant_species, .keep_all = TRUE)
+int_bat_pol <- int_pol %>% filter(taxon == "Chiroptera")  %>% distinct(Plot_ID, animal_species, plant_species, .keep_all = TRUE)
 
 do_ct <- bind_rows(int_do, int_ct)
 int_birds <- do_ct %>% filter(taxon == "Birds") %>% distinct(Plot_ID, animal_species, plant_species, .keep_all = TRUE)
 int_nf <- do_ct %>% filter(!taxon %in% c("Birds", "Chiroptera")) %>% distinct(Plot_ID, animal_species, plant_species, .keep_all = TRUE)
 int_bat <- int_bat %>% distinct(Plot_ID, animal_species, plant_species, .keep_all = TRUE)
 
-#### Traits ####
+# Traits 
+
+# already clean:
+traits_moth <- read.csv(file = "data/raw/SP3/(analysis)REASSEMBLY_SP3_moth_traits.csv")
+
+traits_bee <- read.csv(file = "data/raw/SP3/(analysis)REASSEMBLY_SP3_bees_traits.csv")
 
 traits_do <- read.csv(file = "data/raw/SP4/traits_direct.obs_org.csv")
 traits_do$Plot_ID <- as.factor(traits_do$Plot_ID)
@@ -302,6 +341,23 @@ traits_bat <- traits_bat %>% rename(animal_species = specie, GapeWidth = JW, HWI
 do_ct_traits <- bind_rows(
   traits_ct %>% mutate(source = "ct"),
   traits_do %>% mutate(source = "do"))
+
+bee_trait_map <- tibble::tribble(
+  ~trait,                   ~new_col,
+  "intertegularDistance",   "itDistance",
+  "proboscisLength",        "prLength",
+  "wingLength",             "wingLength",
+  "wingWidth",              "wingWidth"  
+)
+
+traits_bee <- traits_bee %>%
+  inner_join(bee_trait_map, by = "trait") %>%
+  group_by(species, new_col) %>%
+  summarise(value = first(measure), .groups = "drop") %>%
+  pivot_wider(
+    names_from = new_col,
+    values_from = value) %>%
+  rename(animal_species = species)
 
 bird_trait_map <- tibble::tribble(
   ~trait,             ~new_col,

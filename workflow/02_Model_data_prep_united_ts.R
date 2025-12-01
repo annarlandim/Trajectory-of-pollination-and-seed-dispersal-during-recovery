@@ -27,7 +27,7 @@ int_bats_hbt <- int_bats %>%
             .groups = 'drop') %>%
   left_join(traits_bats, by = "animal_species") %>%
   left_join(traits_plants, by = "plant_species") %>%
-  mutate(LogGW = log(GapeWidth), LogBM = log(BodyMass), LogFW = log(FruitWidth), LogH = log(Height), LogCM = log(CropMass)) %>%
+  mutate(LogGW = log(GapeWidth), LogBM = log(BodyMass), LogFW = log(FruitWidth), LogH = log(Height), LogCM = log(CropMass), group = "Bats") %>%
   mutate(    
     StdBM = as.numeric(scale(LogBM)),
     StdCM = as.numeric(scale(LogCM)),
@@ -35,7 +35,7 @@ int_bats_hbt <- int_bats %>%
     StdFW = as.numeric(scale(LogFW)),
     StdHWI = as.numeric(scale(HWIndex)),
     StdH = as.numeric(scale(LogH))) %>%
-  select(Treatment3, interaction, LogBM, LogCM, LogGW, LogFW, HWIndex, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH)
+  select(Treatment3, interaction, LogBM, LogCM, LogGW, LogFW, HWIndex, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
 
 int_birds_hbt <- int_birds %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
@@ -47,16 +47,16 @@ int_birds_hbt <- int_birds %>%
             .groups = 'drop') %>%
   left_join(traits_birds, by = "animal_species") %>%
   left_join(traits_plants, by = "plant_species") %>%
-  mutate(LogBW = log(BeakWidth), LogBM = log(BodyMass), LogFW = log(FruitWidth), LogH = log(Height), LogCM = log(CropMass)) %>%
+  mutate(LogGW = log(BeakWidth), LogBM = log(BodyMass), LogFW = log(FruitWidth), LogH = log(Height), LogCM = log(CropMass), group = "Birds") %>%
   mutate(    
     StdBM = as.numeric(scale(LogBM)),
     StdCM = as.numeric(scale(LogCM)),
-    StdBW = as.numeric(scale(LogBW)),
+    StdGW = as.numeric(scale(LogGW)),
     StdFW = as.numeric(scale(LogFW)),
     StdHWI = as.numeric(scale(HWIndex)),
     StdH = as.numeric(scale(LogH))) %>%
-  select(Treatment3, interaction, LogBM, LogCM, LogBW, LogFW, HWIndex, LogH, StdBM, StdCM, StdBW, StdFW, StdHWI, StdH)
-  
+  select(Treatment3, interaction, LogBM, LogCM, LogGW, LogFW, HWIndex, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
+
 int_nf_hbt <- int_nf %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
   group_by(interaction, Treatment3) %>%
@@ -67,13 +67,15 @@ int_nf_hbt <- int_nf %>%
             .groups = 'drop') %>%
   left_join(traits_nf, by = "animal_species") %>%
   left_join(traits_plants, by = "plant_species") %>%
-  mutate(LogGW = log(GapeWidth), LogBM = log(BodyMass), LogFW = log(FruitWidth), LogCM = log(CropMass)) %>%
+  mutate(LogGW = log(GapeWidth), LogBM = log(BodyMass), LogFW = log(FruitWidth), LogH = log(Height), LogCM = log(CropMass), group = "NF") %>%
   mutate(    
     StdBM = as.numeric(scale(LogBM)),
     StdCM = as.numeric(scale(LogCM)),
     StdGW = as.numeric(scale(LogGW)),
-    StdFW = as.numeric(scale(LogFW))) %>%
-  select(Treatment3, interaction, LogBM, LogCM, LogGW, LogFW, StdBM, StdCM, StdGW, StdFW)
+    StdFW = as.numeric(scale(LogFW)),
+    StdHWI = NA,
+    StdH = as.numeric(scale(LogH))) %>%
+  select(Treatment3, interaction, LogBM, LogCM, LogGW, LogFW, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
 
 int_bats_plot <- int_bats %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
@@ -105,93 +107,47 @@ int_nf_plot <- int_nf %>%
             interaction = first(interaction),
             .groups = "drop") 
 
+int_sd_hbt <- bind_rows(int_bats_hbt, int_birds_hbt, int_nf_hbt)
+
 #### Functional spaces per habitat ####
 
 #### Seed-dispersal
 
-## Bats
-
 # Number of components to be used:
-# cor <- cor.smooth(int_bats_hbt[, c("LogBM", "LogCM", "LogGW", "LogFW", "HWIndex", "LogH")])
+# cor <- cor.smooth(int_sd_hbt[, c("LogBM", "LogCM", "LogGW", "LogFW", "HWIndex", "LogH")])
 # eigen <- eigen(cor)
 # permuted <- matrix(nrow=1000, ncol=6)
 # for(i in 1:1000){
-#   permuted_data <- apply(int_bats_hbt[, c("LogBM", "LogCM", "LogGW", "LogFW", "HWIndex", "LogH")],2,sample)
+#   permuted_data <- apply(int_sd_hbt[, c("LogBM", "LogCM", "LogGW", "LogFW", "HWIndex", "LogH")],2,sample)
 #   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
 # }
 # thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
 # print(eigen$values)
 # print(thresholds)
 
-pca_bats <- principal(int_bats_hbt[, c("StdBM", "StdCM", "StdGW", "StdFW", "StdHWI", "StdH")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
+pca_sd <- principal(int_sd_hbt[, c("StdBM", "StdCM", "StdGW", "StdFW", "StdHWI", "StdH")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
 
-scores_bats <- as.data.frame(pca_bats$scores)
-scores_bats$Treatment3 <- int_bats_hbt$Treatment3
-scores_bats$interaction <- int_bats_hbt$interaction
-scores_bats <- scores_bats %>% dplyr::select(interaction, Treatment3, RC1, RC2)
+scores_sd <- as.data.frame(pca_sd$scores)
+scores_sd$Treatment3 <- int_sd_hbt$Treatment3
+scores_sd$interaction <- int_sd_hbt$interaction
+scores_sd$group <- int_sd_hbt$group
+scores_sd <- scores_sd %>% dplyr::select(group, interaction, Treatment3, RC1, RC2)
 
-scores_bats$Treatment3 <-  factor(scores_bats$Treatment3,
-                                     levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
-
-## Birds
-
-# Number of components to be used:
-# cor <- cor.smooth(int_birds_hbt[, c("LogBM", "LogCM", "LogBW", "LogFW", "HWIndex", "LogH")])
-# eigen <- eigen(cor)
-# permuted <- matrix(nrow=1000, ncol=6)
-# for(i in 1:1000){
-#   permuted_data <- apply(int_birds_hbt[, c("LogBM", "LogCM", "LogBW", "LogFW", "HWIndex", "LogH")],2,sample)
-#   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
-# }
-# thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
-# print(eigen$values)
-# print(thresholds)
-
-pca_birds <- principal(int_birds_hbt[, c("StdBM", "StdCM", "StdBW", "StdFW", "StdHWI", "StdH")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
-
-scores_birds <- as.data.frame(pca_birds$scores)
-scores_birds$Treatment3 <- int_birds_hbt$Treatment3
-scores_birds$interaction <- int_birds_hbt$interaction
-scores_birds <- scores_birds %>% dplyr::select(interaction, Treatment3, RC1, RC2)
-
-scores_birds$Treatment3 <-  factor(scores_birds$Treatment3,
-                                     levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
-
-## Non-flying mammals
-
-# Number of components to be used:
-# cor <- cor.smooth(int_nf_hbt[, c("LogBM", "LogCM", "LogGW", "LogFW")])
-# eigen <- eigen(cor)
-# permuted <- matrix(nrow=1000, ncol=4)
-# for(i in 1:1000){
-#   permuted_data <- apply(int_nf_hbt[, c("LogBM", "LogCM", "LogGW", "LogFW")],2,sample)
-#   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
-# }
-# thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
-# print(eigen$values)
-# print(thresholds)
-
-pca_nf <- principal(int_nf_hbt[, c("StdBM", "StdCM", "StdGW", "StdFW")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
-
-scores_nf <- as.data.frame(pca_nf$scores)
-scores_nf$Treatment3 <- int_nf_hbt$Treatment3
-scores_nf$interaction <- int_nf_hbt$interaction
-scores_nf <- scores_nf %>% dplyr::select(interaction, Treatment3, RC1, RC2)
-
-scores_nf$Treatment3 <-  factor(scores_nf$Treatment3,
+scores_sd$Treatment3 <-  factor(scores_sd$Treatment3,
                                   levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
 
 #### Functional diversity ####
 
-orig_bats <- originality(int_bats_plot, scores_bats)
-orig_birds <- originality(int_birds_plot, scores_birds)
-orig_nf <- originality(int_nf_plot, scores_nf)
-
+orig_bats <- originality(int_bats_plot, scores_sd[scores_sd$group == "Bats", -1])
+orig_birds <- originality(int_birds_plot, scores_sd[scores_sd$group == "Birds", -1])
+orig_nf <- originality(int_nf_plot, scores_sd[scores_sd$group == "NF", -1])
 
 FD_bats <- orig_bats %>%
   group_by(Plot_ID) %>%
   summarise(
     FDBats = mean(orig),
+    FC1Bats = mean(RC1),
+    FC2Bats = mean(RC2),
     .groups = "drop"
   ) 
 
@@ -199,6 +155,8 @@ FD_birds <- orig_birds %>%
   group_by(Plot_ID) %>%
   summarise(
     FDBirds = mean(orig),
+    FC1Birds = mean(RC1),
+    FC2Birds = mean(RC2),
     .groups = "drop"
   ) 
 
@@ -206,6 +164,8 @@ FD_nf <- orig_nf %>%
   group_by(Plot_ID) %>%
   summarise(
     FDNf = mean(orig),
+    FC1Nf = mean(RC1),
+    FC2Nf = mean(RC2),
     .groups = "drop"
   ) 
 

@@ -30,7 +30,8 @@ ts_bats <- ggplot(scores_bats, aes(x = RC1, y = RC2, color=Treatment3)) +
   theme(legend.text = element_text(size=16),
         legend.position = "none",
         axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20),
-        axis.title = element_blank()) +
+        # axis.title = element_blank()
+        ) +
   scale_x_continuous(limits = c(-2.5, 4), breaks = c(-2,-1,0,1,2,3,4)) +
   scale_y_continuous(limits = c(-2.5, 4), breaks = c(-2,-1,0,1,2,3,4)) +
 labs(x = paste("Trait axis 1 (", round(pca_bats$Vaccounted[2,1]*100, 2), "%)", sep = ""),
@@ -65,7 +66,8 @@ ts_birds <- ggplot(scores_birds, aes(x = RC1, y = RC2, color=Treatment3)) +
   theme(legend.text = element_text(size=16),
         legend.position = "none",
         axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20),
-        axis.title = element_blank()) +
+        # axis.title = element_blank()
+        ) +
   scale_x_continuous(limits = c(-2.5, 4), breaks = c(-2,-1,0,1,2,3,4)) +
   scale_y_continuous(limits = c(-2.5, 4), breaks = c(-2,-1,0,1,2,3,4)) +
   labs(x = paste("Trait axis 1 (", round(pca_birds$Vaccounted[2,1]*100, 2), "%)", sep = ""),
@@ -100,7 +102,8 @@ ts_nf <- ggplot(scores_nf, aes(x = RC1, y = RC2, color=Treatment3)) +
   theme(legend.text = element_text(size=16),
         legend.position = "none",
         axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20),
-        axis.title = element_blank()) +
+        # axis.title = element_blank()
+        ) +
   scale_x_continuous(limits = c(-2.5, 4), breaks = c(-2,-1,0,1,2,3,4)) +
   scale_y_continuous(limits = c(-2.5, 4), breaks = c(-2,-1,0,1,2,3,4)) +
   labs(x = paste("Trait axis 1 (", round(pca_nf$Vaccounted[2,1]*100, 2), "%)", sep = ""),

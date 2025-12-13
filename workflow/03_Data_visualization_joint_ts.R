@@ -2,6 +2,172 @@ library(ggplot2)
 
 #### Functional trait spaces ####
 
+###### Pollination
+
+## Bees
+
+hull_bees <- hulls_hbt(scores_pol[scores_pol$group == "Bees",])
+
+centroids_bees <- scores_pol %>%
+  filter(group == "Bees") %>%
+  group_by(Treatment3) %>%
+  summarise(RC1 = mean(RC1, na.rm = TRUE),
+            RC2 = mean(RC2, na.rm = TRUE), .groups = "drop") 
+
+ts_bees <- ggplot(scores_pol, aes(x = RC1, y = RC2, color=Treatment3)) +
+  geom_polygon(data = hull_bees, aes(x = RC1, y = RC2, fill = Treatment3)) +
+  scale_fill_manual(values = c('regeneration early' = rgb(0.89,0.15,0.21,0.3),
+                               'regeneration late' =  rgb(1,0.75,0,0.3),
+                               'old-growth forest' = rgb(0,0.4,0,0.3)),
+                    labels = c("Old-growth forest", "Late regeneration", "Early regeneration")) +
+  geom_point(data = scores_pol[scores_pol$group == "Bees",], aes(RC1, RC2)) +
+  scale_color_manual(values = c('regeneration early' = rgb(0.89,0.15,0.21,0.5),
+                                'regeneration late' =  rgb(1,0.75,0,0.5),
+                                'old-growth forest' = rgb(0,0.4,0,0.5)),
+                     labels = c("Old-growth forest", "Late regeneration", "Early regeneration")) +
+  geom_point(aes(mean(scores_pol[Treatment3=="regeneration early" & group == "Bees", "RC1"]), mean(scores_pol[Treatment3=="regeneration early" & group == "Bees", "RC2"])), size = 5, shape = 23, fill =rgb(0.89,0.15,0.21,0.5), color = rgb(0.89,0.15,0.21,0.5)) +
+  geom_point(aes(mean(scores_pol[Treatment3=="regeneration late" & group == "Bees", "RC1"]), mean(scores_pol[Treatment3=="regeneration late" & group == "Bees", "RC2"])), size = 5, shape = 23, fill = rgb(1, 0.75,0, 0.5), color = rgb(1, 0.75,0, 0.5)) +
+  geom_point(aes(mean(scores_pol[Treatment3=="old-growth forest" & group == "Bees", "RC1"]), mean(scores_pol[Treatment3=="old-growth forest" & group == "Bees", "RC2"])), size = 5, shape = 23, fill = rgb(0,0.4,0,0.5), color = rgb(0,0.4,0,0.5)) +
+  # geom_segment(data = as.data.frame(pca_pol$loadings[,1:2] * 3), aes(x = 0, y = 0, xend = RC1, yend = RC2),
+  #              arrow = arrow(), color = "black", linewidth = 1) +
+  # geom_text(data = as.data.frame(pca_pol$loadings[, 1:2] * 3), aes(label = c("ProbLength", "CorolLength", "WingSize",  "Height"),
+  #                                                                 x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
+  # geom_text(data = scores_pol[scores_pol$group == "Bees",],  aes(label = interaction), check_overlap = FALSE, size = 2.5, alpha = 1, color = "black")  +
+  coord_fixed(ratio = 1) +
+  theme_classic() +
+  theme(legend.text = element_text(size=16),
+        legend.position = "none",
+        axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20),
+        # axis.title = element_blank()
+  ) +
+  scale_x_continuous(limits = c(-3.1, 4.1), breaks = c(-2,0,2, 4)) +
+  scale_y_continuous(limits = c(-6.6, 2.8), breaks = c(-5, -2.5,0,2.5)) +
+  labs(x = paste("Trait axis 1 (", round(pca_sd$Vaccounted[2,1]*100, 2), "%)", sep = ""),
+       y = paste("Trait axis 2 (", round(pca_sd$Vaccounted[2,2]*100, 2), "%)", sep = ""))
+ts_bees
+
+## Moths
+
+hull_moths <- hulls_hbt(scores_pol[scores_pol$group == "Moths",])
+
+centroids_moths <- scores_pol %>%
+  filter(group == "Moths") %>%
+  group_by(Treatment3) %>%
+  summarise(RC1 = mean(RC1, na.rm = TRUE),
+            RC2 = mean(RC2, na.rm = TRUE), .groups = "drop") 
+
+ts_moths <- ggplot(scores_pol, aes(x = RC1, y = RC2, color=Treatment3)) +
+  geom_polygon(data = hull_moths, aes(x = RC1, y = RC2, fill = Treatment3)) +
+  scale_fill_manual(values = c('regeneration early' = rgb(0.89,0.15,0.21,0.3),
+                               'regeneration late' =  rgb(1,0.75,0,0.3),
+                               'old-growth forest' = rgb(0,0.4,0,0.3)),
+                    labels = c("Old-growth forest", "Late regeneration", "Early regeneration")) +
+  geom_point(data = scores_pol[scores_pol$group == "Moths",], aes(RC1, RC2)) +
+  scale_color_manual(values = c('regeneration early' = rgb(0.89,0.15,0.21,0.5),
+                                'regeneration late' =  rgb(1,0.75,0,0.5),
+                                'old-growth forest' = rgb(0,0.4,0,0.5)),
+                     labels = c("Old-growth forest", "Late regeneration", "Early regeneration")) +
+  geom_point(aes(mean(scores_pol[Treatment3=="regeneration early" & group == "Moths", "RC1"]), mean(scores_pol[Treatment3=="regeneration early" & group == "Moths", "RC2"])), size = 5, shape = 23, fill =rgb(0.89,0.15,0.21,0.5), color = rgb(0.89,0.15,0.21,0.5)) +
+  geom_point(aes(mean(scores_pol[Treatment3=="regeneration late" & group == "Moths", "RC1"]), mean(scores_pol[Treatment3=="regeneration late" & group == "Moths", "RC2"])), size = 5, shape = 23, fill = rgb(1, 0.75,0, 0.5), color = rgb(1, 0.75,0, 0.5)) +
+  geom_point(aes(mean(scores_pol[Treatment3=="old-growth forest" & group == "Moths", "RC1"]), mean(scores_pol[Treatment3=="old-growth forest" & group == "Moths", "RC2"])), size = 5, shape = 23, fill = rgb(0,0.4,0,0.5), color = rgb(0,0.4,0,0.5)) +
+  # geom_segment(data = as.data.frame(pca_pol$loadings[,1:2] * 3), aes(x = 0, y = 0, xend = RC1, yend = RC2),
+  #              arrow = arrow(), color = "black", linewidth = 1) +
+  # geom_text(data = as.data.frame(pca_pol$loadings[, 1:2] * 3), aes(label = c("ProbLength", "CorolLength", "WingSize",  "Height"),
+  #                                                                 x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
+  # geom_text(data = scores_pol[scores_pol$group == "Moths",],  aes(label = interaction), check_overlap = FALSE, size = 2.5, alpha = 1, color = "black")  +
+  coord_fixed(ratio = 1) +
+  theme_classic() +
+  theme(legend.text = element_text(size=16),
+        legend.position = "none",
+        axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20),
+        # axis.title = element_blank()
+  ) +
+  scale_x_continuous(limits = c(-3.1, 4.1), breaks = c(-2,0,2, 4)) +
+  scale_y_continuous(limits = c(-6.6, 2.8), breaks = c(-5, -2.5,0,2.5)) +
+  labs(x = paste("Trait axis 1 (", round(pca_sd$Vaccounted[2,1]*100, 2), "%)", sep = ""),
+       y = paste("Trait axis 2 (", round(pca_sd$Vaccounted[2,2]*100, 2), "%)", sep = ""))
+ts_moths
+
+## Bat pollinators
+
+hull_bat_pol <- hulls_hbt(scores_pol[scores_pol$group == "Bat_pol",])
+
+centroids_bat_pol <- scores_pol %>%
+  filter(group == "Bat_pol") %>%
+  group_by(Treatment3) %>%
+  summarise(RC1 = mean(RC1, na.rm = TRUE),
+            RC2 = mean(RC2, na.rm = TRUE), .groups = "drop") 
+
+ts_bat_pol <- ggplot(scores_pol, aes(x = RC1, y = RC2, color=Treatment3)) +
+  geom_polygon(data = hull_bat_pol, aes(x = RC1, y = RC2, fill = Treatment3)) +
+  scale_fill_manual(values = c('regeneration early' = rgb(0.89,0.15,0.21,0.3),
+                               'regeneration late' =  rgb(1,0.75,0,0.3),
+                               'old-growth forest' = rgb(0,0.4,0,0.3)),
+                    labels = c("Old-growth forest", "Late regeneration", "Early regeneration")) +
+  geom_point(data = scores_pol[scores_pol$group == "Bat_pol",], aes(RC1, RC2)) +
+  scale_color_manual(values = c('regeneration early' = rgb(0.89,0.15,0.21,0.5),
+                                'regeneration late' =  rgb(1,0.75,0,0.5),
+                                'old-growth forest' = rgb(0,0.4,0,0.5)),
+                     labels = c("Old-growth forest", "Late regeneration", "Early regeneration")) +
+  geom_point(aes(mean(scores_pol[Treatment3=="regeneration early" & group == "Bat_pol", "RC1"]), mean(scores_pol[Treatment3=="regeneration early" & group == "Bat_pol", "RC2"])), size = 5, shape = 23, fill =rgb(0.89,0.15,0.21,0.5), color = rgb(0.89,0.15,0.21,0.5)) +
+  geom_point(aes(mean(scores_pol[Treatment3=="regeneration late" & group == "Bat_pol", "RC1"]), mean(scores_pol[Treatment3=="regeneration late" & group == "Bat_pol", "RC2"])), size = 5, shape = 23, fill = rgb(1, 0.75,0, 0.5), color = rgb(1, 0.75,0, 0.5)) +
+  geom_point(aes(mean(scores_pol[Treatment3=="old-growth forest" & group == "Bat_pol", "RC1"]), mean(scores_pol[Treatment3=="old-growth forest" & group == "Bat_pol", "RC2"])), size = 5, shape = 23, fill = rgb(0,0.4,0,0.5), color = rgb(0,0.4,0,0.5)) +
+  # geom_segment(data = as.data.frame(pca_pol$loadings[,1:2] * 3), aes(x = 0, y = 0, xend = RC1, yend = RC2),
+  #              arrow = arrow(), color = "black", linewidth = 1) +
+  # geom_text(data = as.data.frame(pca_pol$loadings[, 1:2] * 3), aes(label = c("ProbLength", "CorolLength", "WingSize",  "Height"),
+  #                                                                 x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
+  # geom_text(data = scores_pol[scores_pol$group == "Bat_pol",],  aes(label = interaction), check_overlap = FALSE, size = 2.5, alpha = 1, color = "black")  +
+  coord_fixed(ratio = 1) +
+  theme_classic() +
+  theme(legend.text = element_text(size=16),
+        legend.position = "none",
+        axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20),
+        # axis.title = element_blank()
+  ) +
+  scale_x_continuous(limits = c(-3.1, 4.1), breaks = c(-2,0,2, 4)) +
+  scale_y_continuous(limits = c(-6.6, 2.8), breaks = c(-5, -2.5,0,2.5)) +
+  labs(x = paste("Trait axis 1 (", round(pca_sd$Vaccounted[2,1]*100, 2), "%)", sep = ""),
+       y = paste("Trait axis 2 (", round(pca_sd$Vaccounted[2,2]*100, 2), "%)", sep = ""))
+ts_bat_pol
+
+## ALL Pollinators
+
+hull_pol <- hulls_hbt(scores_pol)
+
+ts_pol <- ggplot(scores_pol, aes(x = RC1, y = RC2, color=Treatment3)) +
+  geom_polygon(data = hull_pol, aes(x = RC1, y = RC2, fill = Treatment3)) +
+  scale_fill_manual(values = c('regeneration early' = rgb(0.89,0.15,0.21,0.3),
+                               'regeneration late' =  rgb(1,0.75,0,0.3),
+                               'old-growth forest' = rgb(0,0.4,0,0.3)),
+                    labels = c("Old-growth forest", "Late regeneration", "Early regeneration")) +
+  geom_point(data = scores_pol, aes(RC1, RC2)) +
+  scale_color_manual(values = c('regeneration early' = rgb(0.89,0.15,0.21,0.5),
+                                'regeneration late' =  rgb(1,0.75,0,0.5),
+                                'old-growth forest' = rgb(0,0.4,0,0.5)),
+                     labels = c("Old-growth forest", "Late regeneration", "Early regeneration")) +
+  geom_point(aes(mean(scores_pol[Treatment3=="regeneration early", "RC1"]), mean(scores_pol[Treatment3=="regeneration early", "RC2"])), size = 5, shape = 23, fill =rgb(0.89,0.15,0.21,0.5), color = rgb(0.89,0.15,0.21,0.5)) +
+  geom_point(aes(mean(scores_pol[Treatment3=="regeneration late", "RC1"]), mean(scores_pol[Treatment3=="regeneration late", "RC2"])), size = 5, shape = 23, fill = rgb(1, 0.75,0, 0.5), color = rgb(1, 0.75,0, 0.5)) +
+  geom_point(aes(mean(scores_pol[Treatment3=="old-growth forest", "RC1"]), mean(scores_pol[Treatment3=="old-growth forest", "RC2"])), size = 5, shape = 23, fill = rgb(0,0.4,0,0.5), color = rgb(0,0.4,0,0.5)) +
+  geom_segment(data = as.data.frame(pca_pol$loadings[,1:2] * 3), aes(x = 0, y = 0, xend = RC1, yend = RC2),
+               arrow = arrow(), color = "black", linewidth = 1) +
+  geom_text(data = as.data.frame(pca_pol$loadings[, 1:2] * 3), aes(label = c("ProbLength", "CorolLength", "WingSize",  "Height"),
+                                                                  x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
+  coord_fixed(ratio = 1) +
+  theme_classic() +
+  theme(legend.text = element_text(size=16),
+        legend.position = "none",
+        axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20),
+        # axis.title = element_blank()
+  ) +
+  scale_x_continuous(limits = c(-3.1, 4.1), breaks = c(-2,0,2, 4)) +
+  scale_y_continuous(limits = c(-6.6, 2.8), breaks = c(-5, -2.5,0,2.5)) +
+  labs(x = paste("Trait axis 1 (", round(pca_pol$Vaccounted[2,1]*100, 2), "%)", sep = ""),
+       y = paste("Trait axis 2 (", round(pca_pol$Vaccounted[2,2]*100, 2), "%)", sep = ""))
+ts_pol
+
+
+###### Seed-dispersal
+
 ## Bats
 
 hull_bats <- hulls_hbt(scores_sd[scores_sd$group == "Bats",])
@@ -23,12 +189,14 @@ ts_bats <- ggplot(scores_sd, aes(x = RC1, y = RC2, color=Treatment3)) +
                                 'regeneration late' =  rgb(1,0.75,0,0.5),
                                 'old-growth forest' = rgb(0,0.4,0,0.5)),
                      labels = c("Old-growth forest", "Late regeneration", "Early regeneration")) +
-  geom_point(data = centroids_bats, aes(RC1, RC2, fill = Treatment3, color = Treatment3), size = 5, shape = 23) +  
+  geom_point(aes(mean(scores_sd[Treatment3=="regeneration early" & group == "Bats", "RC1"]), mean(scores_sd[Treatment3=="regeneration early" & group == "Bats", "RC2"])), size = 5, shape = 23, fill =rgb(0.89,0.15,0.21,0.5), color = rgb(0.89,0.15,0.21,0.5)) +
+  geom_point(aes(mean(scores_sd[Treatment3=="regeneration late" & group == "Bats", "RC1"]), mean(scores_sd[Treatment3=="regeneration late" & group == "Bats", "RC2"])), size = 5, shape = 23, fill = rgb(1, 0.75,0, 0.5), color = rgb(1, 0.75,0, 0.5)) +
+  geom_point(aes(mean(scores_sd[Treatment3=="old-growth forest" & group == "Bats", "RC1"]), mean(scores_sd[Treatment3=="old-growth forest" & group == "Bats", "RC2"])), size = 5, shape = 23, fill = rgb(0,0.4,0,0.5), color = rgb(0,0.4,0,0.5)) +
   # geom_segment(data = as.data.frame(pca_sd$loadings[,1:2] * 3), aes(x = 0, y = 0, xend = RC1, yend = RC2),
   #              arrow = arrow(), color = "black", linewidth = 1) +
   # geom_text(data = as.data.frame(pca_sd$loadings[, 1:2] * 3), aes(label = c("BodyMass", "CropMass", "GapeWidth", "FruitWidth", "HandWingIndex", "Height"),
   #                                                                 x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
-  geom_text(data = scores_sd[scores_sd$group == "Bats",],  aes(label = interaction), check_overlap = FALSE, size = 2.5, alpha = 1, color = "black")  +
+  # geom_text(data = scores_sd[scores_sd$group == "Bats",],  aes(label = interaction), check_overlap = FALSE, size = 2.5, alpha = 1, color = "black")  +
   coord_fixed(ratio = 1) +
   theme_classic() +
   theme(legend.text = element_text(size=16),
@@ -37,7 +205,7 @@ ts_bats <- ggplot(scores_sd, aes(x = RC1, y = RC2, color=Treatment3)) +
         # axis.title = element_blank()
   ) +
   scale_x_continuous(limits = c(-3.1, 3.5), breaks = c(-2,0,2)) +
-  scale_y_continuous(limits = c(-2.3, 4), breaks = c(-2,0,2,4)) +
+  scale_y_continuous(limits = c(-2.8, 4), breaks = c(-2,0,2,4)) +
   labs(x = paste("Trait axis 1 (", round(pca_sd$Vaccounted[2,1]*100, 2), "%)", sep = ""),
        y = paste("Trait axis 2 (", round(pca_sd$Vaccounted[2,2]*100, 2), "%)", sep = ""))
 ts_bats
@@ -64,7 +232,7 @@ ts_birds <- ggplot(scores_sd, aes(x = RC1, y = RC2, color=Treatment3)) +
   #              arrow = arrow(), color = "black", linewidth = 1) +
   # geom_text(data = as.data.frame(pca_sd$loadings[, 1:2] * 3), aes(label = c("BodyMass", "CropMass", "GapeWidth", "FruitWidth", "HandWingIndex", "Height"),
   #                                                                 x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
-  geom_text(data = scores_sd[scores_sd$group == "Birds",],  aes(label = interaction), check_overlap = FALSE, size = 2.5, alpha = 1, color = "black")  +
+  # geom_text(data = scores_sd[scores_sd$group == "Birds",],  aes(label = interaction), check_overlap = FALSE, size = 2.5, alpha = 1, color = "black")  +
   coord_fixed(ratio = 1) +
   theme_classic() +
   theme(legend.text = element_text(size=16),
@@ -73,7 +241,7 @@ ts_birds <- ggplot(scores_sd, aes(x = RC1, y = RC2, color=Treatment3)) +
         # axis.title = element_blank()
   ) +
   scale_x_continuous(limits = c(-3.1, 3.5), breaks = c(-2,0,2)) +
-  scale_y_continuous(limits = c(-2.3, 4), breaks = c(-2,0,2,4)) +
+  scale_y_continuous(limits = c(-2.8, 4), breaks = c(-2,0,2,4)) +
   labs(x = paste("Trait axis 1 (", round(pca_sd$Vaccounted[2,1]*100, 2), "%)", sep = ""),
        y = paste("Trait axis 2 (", round(pca_sd$Vaccounted[2,2]*100, 2), "%)", sep = ""))
 ts_birds
@@ -100,7 +268,7 @@ ts_nf <- ggplot(scores_sd, aes(x = RC1, y = RC2, color=Treatment3)) +
   #              arrow = arrow(), color = "black", linewidth = 1) +
   # geom_text(data = as.data.frame(pca_sd$loadings[, 1:2] * 3), aes(label = c("BodyMass", "CropMass", "GapeWidth", "FruitWidth", "HandWingIndex", "Height"),
   #                                                                 x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
-  geom_text(data = scores_sd[scores_sd$group == "NF",],  aes(label = interaction), check_overlap = FALSE, size = 2.5, alpha = 1, color = "black")  +
+  # geom_text(data = scores_sd[scores_sd$group == "NF",],  aes(label = interaction), check_overlap = FALSE, size = 2.5, alpha = 1, color = "black")  +
   coord_fixed(ratio = 1) +
   theme_classic() +
   theme(legend.text = element_text(size=16),
@@ -109,7 +277,7 @@ ts_nf <- ggplot(scores_sd, aes(x = RC1, y = RC2, color=Treatment3)) +
         # axis.title = element_blank()
   ) +
   scale_x_continuous(limits = c(-3.1, 3.5), breaks = c(-2,0,2)) +
-  scale_y_continuous(limits = c(-2.3, 4), breaks = c(-2,0,2,4)) +
+  scale_y_continuous(limits = c(-2.8, 4), breaks = c(-2,0,2,4)) +
   labs(x = paste("Trait axis 1 (", round(pca_sd$Vaccounted[2,1]*100, 2), "%)", sep = ""),
        y = paste("Trait axis 2 (", round(pca_sd$Vaccounted[2,2]*100, 2), "%)", sep = ""))
 ts_nf
@@ -124,18 +292,17 @@ ts_sd <- ggplot(scores_sd, aes(x = RC1, y = RC2, color=Treatment3)) +
                                'regeneration late' =  rgb(1,0.75,0,0.3),
                                'old-growth forest' = rgb(0,0.4,0,0.3)),
                     labels = c("Old-growth forest", "Late regeneration", "Early regeneration")) +
-  # geom_point(data = scores_sd, aes(RC1, RC2)) +
+  geom_point(data = scores_sd, aes(RC1, RC2)) +
   scale_color_manual(values = c('regeneration early' = rgb(0.89,0.15,0.21,0.5),
                                 'regeneration late' =  rgb(1,0.75,0,0.5),
                                 'old-growth forest' = rgb(0,0.4,0,0.5)),
                      labels = c("Old-growth forest", "Late regeneration", "Early regeneration")) +
- 
-  # geom_point(aes(mean(scores_sd[Treatment3=="regeneration early", "RC1"]), mean(scores_nf[Treatment3=="regeneration early", "RC2"])), size = 5, shape = 23, fill =rgb(0.89,0.15,0.21,0.5), color = rgb(0.89,0.15,0.21,0.5)) +
-  # geom_point(aes(mean(scores_sd[Treatment3=="regeneration late", "RC1"]), mean(scores_nf[Treatment3=="regeneration late", "RC2"])), size = 5, shape = 23, fill = rgb(1, 0.75,0, 0.5), color = rgb(1, 0.75,0, 0.5)) +
-  # geom_point(aes(mean(scores_sd[Treatment3=="old-growth forest", "RC1"]), mean(scores_nf[Treatment3=="old-growth forest", "RC2"])), size = 5, shape = 23, fill = rgb(0,0.4,0,0.5), color = rgb(0,0.4,0,0.5)) +
+  geom_point(aes(mean(scores_sd[Treatment3=="regeneration early", "RC1"]), mean(scores_sd[Treatment3=="regeneration early", "RC2"])), size = 5, shape = 23, fill =rgb(0.89,0.15,0.21,0.5), color = rgb(0.89,0.15,0.21,0.5)) +
+  geom_point(aes(mean(scores_sd[Treatment3=="regeneration late", "RC1"]), mean(scores_sd[Treatment3=="regeneration late", "RC2"])), size = 5, shape = 23, fill = rgb(1, 0.75,0, 0.5), color = rgb(1, 0.75,0, 0.5)) +
+  geom_point(aes(mean(scores_sd[Treatment3=="old-growth forest", "RC1"]), mean(scores_sd[Treatment3=="old-growth forest", "RC2"])), size = 5, shape = 23, fill = rgb(0,0.4,0,0.5), color = rgb(0,0.4,0,0.5)) +
   geom_segment(data = as.data.frame(pca_sd$loadings[,1:2] * 3), aes(x = 0, y = 0, xend = RC1, yend = RC2),
                arrow = arrow(), color = "black", linewidth = 1) +
-  geom_text(data = as.data.frame(pca_sd$loadings[, 1:2] * 3), aes(label = c("BodyMass", "CropMass", "GapeWidth", "FruitWidth", "HandWingIndex", "Height"),
+  geom_text(data = as.data.frame(pca_sd$loadings[, 1:2] * 3), aes(label = c("GapeWidth", "FruitWidth", "HandWingIndex", "Height"),
                                                                      x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
   coord_fixed(ratio = 1) +
   theme_classic() +
@@ -145,7 +312,7 @@ ts_sd <- ggplot(scores_sd, aes(x = RC1, y = RC2, color=Treatment3)) +
         # axis.title = element_blank()
   ) +
   scale_x_continuous(limits = c(-3.1, 3.5), breaks = c(-2,0,2)) +
-  scale_y_continuous(limits = c(-2.3, 4), breaks = c(-2,0,2,4)) +
+  scale_y_continuous(limits = c(-2.8, 4), breaks = c(-2,0,2,4)) +
   labs(x = paste("Trait axis 1 (", round(pca_sd$Vaccounted[2,1]*100, 2), "%)", sep = ""),
        y = paste("Trait axis 2 (", round(pca_sd$Vaccounted[2,2]*100, 2), "%)", sep = ""))
 ts_sd

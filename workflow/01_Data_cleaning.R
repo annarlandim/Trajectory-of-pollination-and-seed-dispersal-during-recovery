@@ -70,9 +70,37 @@ int_bat <- int_bat %>%
   left_join(freq_bat_long, by = c("Plot_ID", "animal_species")) %>%
   uncount(weights = n)
 
-#### Plant names ####
+#### Plants ####
 
 Plants <- read.csv(file = "data/raw/SP4/traits_plants_org.csv")[-c(1:3),-1]
+trees <- read.csv(file = "data/raw/tree_data_final.csv")
+pol_plants <- read.csv("data/raw/SP3/(analysis)REASSEMBLY_SP3_plants_traits.csv") %>%
+  mutate(
+    Lifeform.Habit = case_when(
+      Lifeform.Habit == "EpiphyticSchrub" ~ "EpiphyticShrub",
+      TRUE ~ Lifeform.Habit 
+    ))
+
+#### Plant names ####
+
+pol_plants <- pol_plants %>%
+  mutate(
+    Species_name = str_replace(
+      string = Species_name, 
+      pattern = "cf\\._", 
+      replacement = ""
+    )) %>%
+  mutate(Species_name = case_when(
+    Species_name == "Eschweilera_cf._Rimbachii" ~ "Eschweilera_rimbachii",
+    Species_name == "Virola_sp._1_(reidii_or_pavonis)" ~ "Virola_reidii", # both have similar heights
+    Species_name == "Miconia_conocuatrecasasii" ~ "Miconia_conocuatrecasii",
+    Species_name == "Miconia_Oraria" ~ "Miconia_conocuatrecasii",
+    Species_name == "Cordia_aff._Lucidula" ~ "Cordia_lucidula",
+    Species_name == "Miconia_conocuatrecasasii" ~ "Miconia_conocuatrecasii",
+    Species_name == "Eschweilera_Rimbachii" ~ "Eschweilera_rimbachii",
+    TRUE ~ Species_name
+  ))
+
 Plants[Plants$species=="Nectandra_purpurea_cf.", "species"] <- "Nectandra_purpurea"
 Plants[Plants$species=="Osteophloeum_platis_cf.", "species"] <- "Osteophloeum_platyspermum"
 Plants[Plants$species=="Miconia_'alargada tres venas abajo'", "species"] <- "Miconia_multiplicata"
@@ -321,12 +349,133 @@ int_birds <- do_ct %>% filter(taxon == "Birds") %>% distinct(Plot_ID, animal_spe
 int_nf <- do_ct %>% filter(!taxon %in% c("Birds", "Chiroptera")) %>% distinct(Plot_ID, animal_species, plant_species, .keep_all = TRUE)
 int_bat <- int_bat %>% distinct(Plot_ID, animal_species, plant_species, .keep_all = TRUE)
 
-# Traits 
+#### Traits ####
 
-# already clean:
+# Animal traits:
+
+# Pollination:
+
 traits_moth <- read.csv(file = "data/raw/SP3/(analysis)REASSEMBLY_SP3_moth_traits.csv")
+traits_moth <- traits_moth %>%
+filter(!str_detect(Species, regex("NN|NIC", ignore_case = TRUE))) %>%
+  group_by(Species) %>%
+  summarise(prLength = mean(proboscisLength, na.rm = T), bodyLength = mean(bodyLength, na.rm = T), wingLength = mean(wingLength, na.rm = T)) %>%
+  mutate(across(
+    .cols = -Species, 
+    .fns = ~ ifelse(is.nan(.), NA, .)
+  )) %>%
+  rename(animal_species = Species) %>%
+  ungroup()
+
+# adding missing species from interactions to traits, to get mean genus values
+missing_moths <- tibble(
+  animal_species = setdiff(int_moths$animal_species, traits_moth$animal_species),
+  prLength = NA_real_, bodyLength = NA_real_, wingLength = NA_real_
+)
+  
+traits_moth <- bind_rows(traits_moth, missing_moths)
+
+# percentage of NAs (i.e., percentage where genus values will be used)
+perc_NA_moths <- traits_moth %>%
+  summarise(
+    na_bodyLength = sum(is.na(bodyLength)), # 3.45
+    na_prLength = sum(is.na(prLength)), # 12.8
+    na_wLength = sum(is.na(wingLength)), # 3.45
+    n_row = n()) %>%
+  mutate(
+    p_bodyLength = (na_bodyLength/n_row) *100,
+    p_prLength = (na_prLength/n_row) *100,
+    p_wLength = (na_wLength/n_row) *100,
+  )
+
+# including genus means
+traits_moth <- traits_moth %>%
+  mutate(across(
+    .cols = where(is.numeric), 
+    .fns = ~ replace(., is.nan(.), NA)))  %>%
+  mutate(Genus = word(animal_species, 1, sep = "_")) %>%
+  group_by(Genus) %>%
+  mutate(bodyLength = replace_na(data = bodyLength, replace = mean(bodyLength, na.rm = T)),
+         prLength = replace_na(data = prLength, replace = mean(prLength, na.rm = T)),
+         wingLength = replace_na(data = wingLength, replace = mean(wingLength, na.rm = T))) %>%
+  ungroup()
 
 traits_bee <- read.csv(file = "data/raw/SP3/(analysis)REASSEMBLY_SP3_bees_traits.csv")
+traits_bee[traits_bee$species  == "Augochlorospis_cf_sp15", "species"] <- "Augochloropsis_cf_sp15" 
+bee_trait_map <- tibble::tribble(
+  ~trait,                   ~new_col,
+  "intertegularDistance",   "itDistance",
+  "proboscisLength",        "prLength",
+  "wingLength",             "wingLength" 
+)
+traits_bee <- traits_bee %>%
+  inner_join(bee_trait_map, by = "trait") %>%
+  group_by(species, new_col) %>%
+  summarise(value = mean(measure), .groups = "drop") %>%
+  pivot_wider(
+    names_from = new_col,
+    values_from = value) %>%
+  rename(animal_species = species) 
+
+missing_bees <- tibble(
+  animal_species = setdiff(int_bees$animal_species, traits_bee$animal_species),
+  prLength = NA_real_, itDistance = NA_real_, wingLength = NA_real_
+)
+
+traits_bee <- bind_rows(traits_bee, missing_bees)
+
+perc_NA_bees <- traits_bee %>%
+  summarise(
+    na_itDist = sum(is.na(itDistance)), # 11.2
+    na_prLength = sum(is.na(prLength)), # 17.1
+    na_wLength = sum(is.na(wingLength)), # 11.2
+    n_row = n()) %>%
+  mutate(
+    p_itDist = (na_itDist/n_row) *100,
+    p_prLength = (na_prLength/n_row) *100,
+    p_wLength = (na_wLength/n_row) *100,
+  )
+
+traits_bee <- traits_bee %>%
+  mutate(Genus = word(animal_species, 1, sep = "_")) %>%
+  group_by(Genus) %>%
+  mutate(itDistance = replace_na(data = itDistance, replace = mean(itDistance, na.rm = T)),
+         prLength = replace_na(data = prLength, replace = mean(prLength, na.rm = T)),
+         wingLength = replace_na(data = wingLength, replace = mean(wingLength, na.rm = T))) %>%
+  ungroup()
+
+# Seed dispersal
+
+traits_bat <- read.csv(file = "data/raw/SP4/Functional_Bat_matrix_SE.csv")
+traits_bat <- traits_bat %>% rename(animal_species = specie, GapeWidth = JW, HWIndex = HWI, BodyMass = W) %>%
+  select(animal_species, GapeWidth, HWIndex, BodyMass)
+
+missing_bats <- tibble(
+  animal_species = setdiff(int_bat_pol$animal_species, traits_bat$animal_species),
+  GapeWidth = NA_real_, HWIndex = NA_real_, BodyMass = NA_real_
+)
+
+traits_bat <- bind_rows(traits_bat, missing_bats)
+
+perc_NA_bat <- traits_bat %>%
+  summarise(
+    na_GapeWidth = sum(is.na(GapeWidth)), # 2.32, but only for pollinators
+    na_HWIndex = sum(is.na(HWIndex)), # 2.32, but only for pollinators
+    na_BodyMass = sum(is.na(BodyMass)), # 2.32, but only for pollinators
+    n_row = n()) %>%
+  mutate(
+    p_GapeWidth = (na_GapeWidth/n_row) *100,
+    p_HWIndex = (na_HWIndex/n_row) *100,
+    p_BodyMass = (na_BodyMass/n_row) *100,
+  )
+
+traits_bat <- traits_bat %>%
+  mutate(Genus = word(animal_species, 1, sep = "_")) %>%
+  group_by(Genus) %>%
+  mutate(GapeWidth = replace_na(data = GapeWidth, replace = mean(GapeWidth, na.rm = T)),
+         HWIndex = replace_na(data = HWIndex, replace = mean(HWIndex, na.rm = T)),
+         BodyMass = replace_na(data = BodyMass, replace = mean(BodyMass, na.rm = T))) %>%
+  ungroup()
 
 traits_do <- read.csv(file = "data/raw/SP4/traits_direct.obs_org.csv")
 traits_do$Plot_ID <- as.factor(traits_do$Plot_ID)
@@ -334,36 +483,17 @@ traits_do$Plot_ID <- as.factor(traits_do$Plot_ID)
 traits_ct <- read.csv(file = "data/raw/SP4/traits_cam.trap_org.csv")
 traits_ct$Plot_ID <- as.factor(traits_ct$Plot_ID)
 
-traits_bat <- read.csv(file = "data/raw/SP4/Functional_Bat_matrix_SE.csv")
-traits_bat <- traits_bat %>% rename(animal_species = specie, GapeWidth = JW, HWIndex = HWI, BodyMass = W) %>%
-  select(animal_species, GapeWidth, HWIndex, BodyMass)
-
 do_ct_traits <- bind_rows(
   traits_ct %>% mutate(source = "ct"),
   traits_do %>% mutate(source = "do"))
 
-bee_trait_map <- tibble::tribble(
-  ~trait,                   ~new_col,
-  "intertegularDistance",   "itDistance",
-  "proboscisLength",        "prLength",
-  "wingLength",             "wingLength",
-  "wingWidth",              "wingWidth"  
-)
-
-traits_bee <- traits_bee %>%
-  inner_join(bee_trait_map, by = "trait") %>%
-  group_by(species, new_col) %>%
-  summarise(value = first(measure), .groups = "drop") %>%
-  pivot_wider(
-    names_from = new_col,
-    values_from = value) %>%
-  rename(animal_species = species)
 
 bird_trait_map <- tibble::tribble(
   ~trait,             ~new_col,
   "Beak.Width",       "BeakWidth",
   "Hand.wing.Index",  "HWIndex",
   "BodyMass",         "BodyMass")
+
 traits_birds <- do_ct_traits %>%
   filter(taxon == "Birds") %>%
   inner_join(bird_trait_map, by = "trait") %>%
@@ -373,6 +503,19 @@ traits_birds <- do_ct_traits %>%
     names_from = new_col,
     values_from = value) %>%
   rename(animal_species = species)
+
+perc_NA_birds <- traits_birds %>%
+  summarise(
+    na_BeakWidth = sum(is.na(BeakWidth)), # 0
+    na_HWIndex = sum(is.na(HWIndex)), # 0
+    na_BodyMass = sum(is.na(BodyMass)), # 0
+    n_row = n()) %>%
+  mutate(
+    p_BeakWidth = (na_BeakWidth/n_row) *100,
+    p_HWIndex = (na_HWIndex/n_row) *100,
+    p_BodyMass = (na_BodyMass/n_row) *100,
+  )
+
 
 nf_trait_map <- tibble::tribble(
   ~trait,          ~new_col,
@@ -388,13 +531,86 @@ traits_nf <- do_ct_traits %>%
     values_from = value) %>%
   rename(animal_species = species)
 
+perc_NA_nf <- traits_nf %>%
+  summarise(
+    na_GapeWidth = sum(is.na(GapeWidth)), # 15.4
+    na_BodyMass = sum(is.na(BodyMass)), # 0
+    n_row = n()) %>%
+  mutate(
+    p_GapeWidth = (na_GapeWidth/n_row) *100,
+    p_BodyMass = (na_BodyMass/n_row) *100,
+  )
+traits_nf <- traits_nf %>%
+  mutate(Genus = word(animal_species, 1, sep = "_")) %>%
+  group_by(Genus) %>%
+  mutate(GapeWidth = replace_na(data = GapeWidth, replace = mean(GapeWidth, na.rm = T)),
+         BodyMass = replace_na(data = BodyMass, replace = mean(BodyMass, na.rm = T))) %>%
+  ungroup()
+
+# Plant traits
+
+tree_height <- read.csv("data/raw/tree_data_measures.csv")
+
+mean_tree_height <- trees %>%
+  mutate(Number = as.numeric(Number)) %>%
+  left_join(y = tree_height, by = c("Plot", "Number"), relationship = "many-to-many") %>%
+  group_by(Species) %>%
+  summarise(mean_height = mean(Height, na.rm = T)) %>%
+  ungroup() %>%
+  rename(value_numeric = mean_height) %>%
+  mutate(trait = "height")
+
 Plants <- Plants %>%
-  select(species, trait, value_numeric)
+  select(species, trait, value_numeric) 
 
 bat_plants <- read.csv("data/raw/Bat_plants.csv")
 
 bat_plants <- bat_plants %>% 
   transmute(plant_species, FruitWidth, Height, CropMass = NA_real_)
+
+# finding values for life forms that are different than trees
+
+unique(pol_plants$Lifeform.Habit)
+freq_gen <- pol_plants %>%
+  count(Lifeform.Habit, Genus)
+
+pol_plants <- pol_plants %>%
+  filter(!is.na(Genus)) %>%
+  mutate(lf_height = case_when(
+    Lifeform.Habit == "ScramblingShrub" ~ 3,
+    Lifeform.Habit == "SubshrubOrShrub" ~ 5,
+    Lifeform.Habit == "HerbGeneral" ~ 1,
+    Lifeform.Habit == "Annual" ~ 0.5,
+    Lifeform.Habit == "Geophyte" ~ 2, 
+    Lifeform.Habit == "Perennial" ~ 1,
+    Lifeform.Habit == "EpiphyticShrub" ~ 1.5,
+    Lifeform.Habit == "Epiphyte" ~ 5,
+    Lifeform.Habit == "Climber" ~ 5,
+    Lifeform.Habit == "Liana" ~ 15,
+    Lifeform.Habit == "ScramblingOrEpyphticShrub" ~ 3
+  )) %>%
+    left_join(mean_tree_height, by = c("Species_name" = "Species")) %>%
+    mutate(lf_height = case_when(
+      !is.na(value_numeric) ~ value_numeric,
+      TRUE ~ lf_height)) %>%
+  select(Genus, plant_species = Species_name, corLength = Length_Av.mm., height = lf_height) %>%
+  mutate(corLength = as.numeric(corLength)) 
+
+perc_NA_pol_plants <- pol_plants %>%
+  summarise(
+    na_corLength = sum(is.na(corLength)), # 8.92
+    na_height = sum(is.na(height)), # 16.61
+    n_row = n()) %>%
+  mutate(
+    p_corLength = (na_corLength/n_row) *100,
+    p_height = (na_height/n_row) *100,
+  )
+
+pol_plants <- pol_plants %>%
+  group_by(Genus) %>%
+  mutate(height = replace_na(data = height, replace = mean(height, na.rm = T)),
+         corLength = replace_na(data = corLength, replace = mean(corLength, na.rm = T))) %>%
+  ungroup()
 
 fruit_width <- Plants %>%
   filter(trait == "FruitWidth") %>%
@@ -436,16 +652,65 @@ traits_plants <- data.frame(plant_species = unique(Plants$species)) %>%
   left_join(fruit_width, by = "plant_species") %>%
   left_join(height, by = "plant_species") %>%
   left_join(crop_mass, by = "plant_species") %>%
-  bind_rows(bat_plants)
+  bind_rows(bat_plants) 
 
+perc_NA_plants_sd <- traits_plants %>%
+  summarise(
+    na_FruitWidth = sum(is.na(FruitWidth)), # 25.45
+    na_Height = sum(is.na(Height)), # 3.64
+    na_CropMass = sum(is.na(CropMass)), # 31.51
+    n_row = n()) %>%
+  mutate(
+    p_FruitWidth = (na_FruitWidth/n_row) *100,
+    p_Height = (na_Height/n_row) *100,
+    p_CropMass = (na_CropMass/n_row) *100,
+  )
+
+traits_plants <- traits_plants %>%
+  mutate(Genus = word(plant_species, 1, sep = "_")) %>%
+  group_by(Genus) %>%
+  mutate(FruitWidth = replace_na(data = FruitWidth, replace = mean(FruitWidth, na.rm = T)),
+         Height = replace_na(data = Height, replace = mean(Height, na.rm = T)),
+         CropMass = replace_na(data = CropMass, replace = mean(CropMass, na.rm = T))) %>%
+  ungroup()
+
+all_traits_plants <- full_join(traits_plants, pol_plants, by = "plant_species") %>%
+  mutate(Height = coalesce(height, Height)) %>%
+  select(plant_species, FruitWidth, Height, CropMass, CorLength = corLength)
+
+missing__plants <- tibble(
+  plant_species = setdiff(c(int_bees$plant_species, int_moths$plant_species, int_bat_pol$plant_species,
+                            int_birds$plant_species, int_bat$plant_species, int_nf$plant_species),
+                          all_traits_plants$plant_species),
+  FruitWidth = NA_real_, Height = NA_real_, CropMass = NA_real_, CorLength = NA_real_
+)
+
+all_traits_plants <- bind_rows(all_traits_plants, missing__plants)
+
+all_traits_plants <- all_traits_plants %>%
+  mutate(Genus = word(plant_species, 1, sep = "_")) %>%
+  group_by(Genus) %>%
+  mutate(FruitWidth = replace_na(data = FruitWidth, replace = mean(FruitWidth, na.rm = T)),
+         Height = replace_na(data = Height, replace = mean(Height, na.rm = T)),
+         CropMass = replace_na(data = CropMass, replace = mean(CropMass, na.rm = T)),
+         CorLength = replace_na(data = CorLength, replace = mean(CorLength, na.rm = T))) %>%
+  ungroup()
+
+all_traits_plants$CorLength <- all_traits_plants$CorLength + 1e-6  # to avoid 0s, which will become -Inf after log
+
+# write.csv(int_bees, file = here::here("data", "processed", "int_bees.csv"), row.names = F)
+# write.csv(int_moths, file = here::here("data", "processed", "int_moths.csv"), row.names = F)
+# write.csv(int_bat_pol, file = here::here("data", "processed", "int_bat_pol.csv"), row.names = F)
 # write.csv(int_birds, file = here::here("data", "processed", "int_birds.csv"), row.names = F)
 # write.csv(int_bat, file = here::here("data", "processed", "int_bats.csv"), row.names = F)
 # write.csv(int_nf, file = here::here("data", "processed", "int_nf.csv"), row.names = F)
-# 
+
+# write.csv(traits_bee, file = here::here("data", "processed", "traits_bees.csv"), row.names = F)
+# write.csv(traits_moth, file = here::here("data", "processed", "traits_moth.csv"), row.names = F)
 # write.csv(traits_birds, file = here::here("data", "processed", "traits_birds.csv"), row.names = F)
 # write.csv(traits_bat, file = here::here("data", "processed","traits_bats.csv"), row.names = F)
 # write.csv(traits_nf, file = here::here("data", "processed", "traits_nf.csv"), row.names = F)
-# write.csv(traits_plants, file = here::here("data", "processed", "traits_plants.csv"), row.names = F)
+# write.csv(all_traits_plants, file = here::here("data", "processed", "traits_plants.csv"), row.names = F)
 
 #### Vegetation structure ####
 

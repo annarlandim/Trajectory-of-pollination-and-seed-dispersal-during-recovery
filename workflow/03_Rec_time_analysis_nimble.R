@@ -95,8 +95,12 @@ rec_df <- long %>%
     connectivity = ConIndex
   )
 
+group_index_vec <- c(1, 1, 1, 2, 2, 2, 3, 3, 3)
+
 constList <- list(
   n_var = ncol(dataSub) - 3,
+  n_groups = 3,          # mudar quando add as plantulas
+  group_index = group_index_vec,
   n_old = nrow(old_df),
   n_rec = nrow(rec_df),
   variable_old = old_df$variable_old,
@@ -113,6 +117,110 @@ dataList <- list(
 )
 
 #### Model ####
+
+code_stratified <- nimbleCode({
+  
+  ################
+  #  Hyperpriors # 
+  ################
+  
+  for(k in 1:n_groups){
+    
+    # --- theta_inf ---
+    mean_theta_inf[k]  ~ dnorm(0, sd = 1)
+    sigma_theta_inf[k] ~ T(dt(mu = 0, tau = 1, df = 3), 0, Inf)
+    
+    # --- theta_0 ---
+    mean_theta_0[k]    ~ dnorm(0, sd = 1)
+    sigma_theta_0[k]   ~ T(dt(mu = 0, tau = 1, df = 3), 0, Inf)
+    
+    # --- Connectivity (alpha and beta) ---
+    mean_alpha_con[k]  ~ dnorm(0, sd = 1)
+    sigma_alpha_con[k] ~ T(dt(mu = 0, tau = 1, df = 3), 0, Inf)
+    
+    mean_beta_con[k]   ~ dnorm(0, sd = 1)
+    sigma_beta_con[k]  ~ T(dt(mu = 0, tau = 1, df = 3), 0, Inf)
+  }
+  
+  ################################
+  #   Parameters per variable j  #
+  ################################
+  
+  # --- theta_inf ---
+  
+  for(j in 1:n_var){
+    beta_inf_raw[j] ~ dnorm(0, sd = 1)
+    # asymptote per group, original scale (always > 0)
+    theta_inf[j] <- exp(
+      mean_theta_inf[ group_index[j] ] + 
+        beta_inf_raw[j] * sigma_theta_inf[ group_index[j] ]
+    )
+    # priors on variance components:
+    sigma_raw_old[j] ~ T(dt(mu = 0, tau = 1, df = 3), 0, Inf)
+    sigma_old[j] <- s_old[j] * sigma_raw_old[j] # scale by observed sd
+    tau_old[j] <- 1/pow(sigma_old[j], 2)
+  }
+  
+  # --- theta_0 ---
+  
+  for(j in 1:n_var){
+    beta_0_raw[j] ~ dnorm(0, sd = 1)
+    # asymptote per group, original scale (always > 0)
+    theta_0[j] <- exp(
+      mean_theta_0[ group_index[j] ] + 
+        beta_0_raw[j] * sigma_theta_0[ group_index[j] ]
+    )
+    # priors on variance components:
+    sigma_raw_rec[j] ~ T(dt(mu = 0, tau = 1, df = 3), 0, Inf)
+    sigma_rec[j] <- s_rec[j] * sigma_raw_rec[j] # scale by observed sd
+    tau_rec[j] <- 1/pow(sigma_rec[j], 2)
+  }
+  
+  
+  # --- alpha_con, beta_con ---
+  
+  for (j in 1:n_var) {
+    alpha_con_raw[j] ~ dnorm(0, sd = 1)
+    alpha_con[j] <- mean_alpha_con[ group_index[j] ] + 
+      alpha_con_raw[j] * sigma_alpha_con[ group_index[j] ]
+    
+    beta_con_raw[j] ~ dnorm(0, sd = 1)
+    beta_con[j] <- mean_beta_con[ group_index[j] ] + 
+      beta_con_raw[j] * sigma_beta_con[ group_index[j] ]
+  }
+  
+  ##########################
+  # Likelihoods            #
+  ##########################
+  
+  # old-growth
+  for (i in 1:n_old) {
+    # parameterization reminder:
+    # meanlog = log(theta_inf[group]), sdlog = sigma_old[group]
+    Y_old[i] ~ dlnorm(meanlog = log(theta_inf[ variable_old[i] ]),
+                      sdlog   = sigma_old[ variable_old[i] ])
+  }
+  
+  # recovering forests
+  for (i in 1:n_rec) {
+    
+    # recovery trajectories per group
+    mu_rec[i] <-
+      theta_0[ variable_rec[i] ] +
+      (theta_inf[ variable_rec[i] ] - theta_0[ variable_rec[i] ]) *
+      (1 - exp(-lambda[i] * tx[i]))
+    
+    # recovery rate (lambda) according to connectivity:
+    lambda[i] <- exp(
+      alpha_con[ variable_rec[i] ] +
+        beta_con[  variable_rec[i] ] * connectivity[i]
+    )
+    
+    Y_rec[i] ~ dlnorm(meanlog = log(mu_rec[i]),
+                      sdlog   = sigma_rec[ variable_rec[i] ])
+  }
+  
+})
 
 code <- nimbleCode({
   
@@ -204,6 +312,35 @@ code <- nimbleCode({
 })
 
 # function to set initial values
+initsFun_strat <- function(constList, dataList) {
+  n_var <- constList$n_var
+  n_groups <- constList$n_groups # <--- IMPORTANTE: Pegar o número de grupos (3)
+  
+  list(
+    # --- HIPERPARÂMETROS (Agora são vetores de tamanho n_groups) ---
+    # Antes era apenas 0 ou runif(1), agora geramos um valor para cada grupo
+    
+    mean_theta_inf  = rnorm(n_groups, 0, 0.1), 
+    mean_theta_0    = rnorm(n_groups, 0, 0.1),
+    mean_alpha_con  = rnorm(n_groups, 0, 0.1),
+    mean_beta_con   = rnorm(n_groups, 0, 0.1),
+    
+    sigma_theta_inf = runif(n_groups, 0.5, 1.5),
+    sigma_theta_0   = runif(n_groups, 0.5, 1.5),
+    sigma_alpha_con = runif(n_groups, 0.5, 1.5),
+    sigma_beta_con  = runif(n_groups, 0.5, 1.5),
+    
+    # --- PARÂMETROS POR VARIÁVEL (Continuam iguais, tamanho n_var) ---
+    beta_inf_raw  = rnorm(n_var, 0, 1),
+    beta_0_raw    = rnorm(n_var, 0, 1),
+    alpha_con_raw = rnorm(n_var, 0, 1),
+    beta_con_raw  = rnorm(n_var, 0, 1),
+    
+    # --- ERROS DE OBSERVAÇÃO (Continuam iguais, tamanho n_var) ---
+    sigma_raw_old = runif(n_var, 0.5, 1.5),
+    sigma_raw_rec = runif(n_var, 0.5, 1.5)
+  )
+}
 initsFun <- function(constList, dataList) {
   n_var <- constList$n_var
   
@@ -243,8 +380,8 @@ monitorList <- c(
 
 # bundle the data for nimble
 nimbleList <- list(
-  code = code,
-  initsFun = initsFun,
+  code = code_stratified,
+  initsFun = initsFun_strat,
   constList = constList,
   dataList = dataList,
   monitorList = monitorList
@@ -252,10 +389,10 @@ nimbleList <- list(
 
 # set up model
 modelR <- nimbleModel(
-  code = code,
+  code = code_stratified,
   constants = constList,
   data = dataList,
-  inits = initsFun(constList, dataList),
+  inits = initsFun_strat(constList, dataList),
   calculate = FALSE
 )
 #modelR$initializeInfo()
@@ -279,7 +416,7 @@ mcmcR <- buildMCMC(mcmcConf)
 
 # compile model, functions, set initial values and compile MCMC sampler
 modelC <- compileNimble(modelR)
-modelC$setInits(initsFun(constList, dataList))
+modelC$setInits(initsFun_strat(constList, dataList))
 mcmcC <- compileNimble(mcmcR, project = modelR)
 
 # run the MCMC algorithm
@@ -313,36 +450,51 @@ gelman_log <- function(samples_list, pattern) {
   return(gelman.diag(samples_log))
 }
 
+
 gelman.diag(samples)
-gelman_log(samples, "theta_inf")
-effectiveSize(log(samples_all[, grepl("theta_inf\\[", colnames(samples_all)), drop = FALSE]))
-autocorr.diag(log(samples_all[, grepl("theta_inf\\[", colnames(samples_all)), drop = FALSE]))
 
-gelman.diag(as.mcmc.list(samples[, c("mean_theta_inf", "sigma_theta_inf"), drop=FALSE]))
-effectiveSize(samples_all[, c("mean_theta_inf", "sigma_theta_inf"), drop = FALSE])
-autocorr.diag(samples_all[, c("mean_theta_inf", "sigma_theta_inf"), drop = FALSE])
+gelman_log(samples, "^theta_inf")
+effectiveSize(log(samples_all[, grepl("^theta_inf\\[", colnames(samples_all)), drop = FALSE]))
+autocorr.diag(log(samples_all[, grepl("^theta_inf\\[", colnames(samples_all)), drop = FALSE]))
 
-gelman_log(samples, "theta_0")
-effectiveSize(log(samples_all[, grepl("theta_0\\[", colnames(samples_all)), drop = FALSE]))
-autocorr.diag(log(samples_all[, grepl("theta_0\\[", colnames(samples_all)), drop = FALSE]))
+gelman.diag(samples[, grep("^(mean_theta_inf|sigma_theta_inf)\\[", varnames(samples)), drop=FALSE])
+effectiveSize(samples_all[, grep("^(mean_theta_inf|sigma_theta_inf)\\[", varnames(samples)), drop = FALSE])
+autocorr.diag(samples_all[, grep("^(mean_theta_inf|sigma_theta_inf)\\[", varnames(samples)), drop = FALSE])
 
-effectiveSize(samples_all[, c("mean_theta_0", "sigma_theta_0"), drop = FALSE])
-autocorr.diag(samples_all[, c("mean_theta_0", "sigma_theta_0"), drop = FALSE])
+gelman_log(samples, "^theta_0")
+effectiveSize(log(samples_all[, grepl("^theta_0\\[", colnames(samples_all)), drop = FALSE]))
+autocorr.diag(log(samples_all[, grepl("^theta_0\\[", colnames(samples_all)), drop = FALSE]))
 
+gelman.diag((samples[, grep("^(mean_theta_0|sigma_theta_0)\\[", varnames(samples)), drop=FALSE]))
+effectiveSize(samples_all[, grep("^(mean_theta_0|sigma_theta_0)\\[", varnames(samples)), drop = FALSE])
+autocorr.diag(samples_all[, grep("^(mean_theta_0|sigma_theta_0)\\[", varnames(samples)), drop = FALSE])
+
+gelman.diag((samples[, grep("^alpha_con\\[", varnames(samples)), drop=FALSE]))
 effectiveSize(samples_all[, grepl("alpha_con", colnames(samples_all)), drop = FALSE])
 autocorr.diag(samples_all[, grepl("alpha_con", colnames(samples_all)), drop = FALSE])
 
+gelman.diag((samples[, grep("^(mean_alpha_con|sigma_alpha_con)\\[", varnames(samples)), drop=FALSE]))
+effectiveSize(samples_all[, grep("^(mean_alpha_con|sigma_alpha_con)\\[", varnames(samples)), drop = FALSE])
+autocorr.diag(samples_all[, grep("^(mean_alpha_con|sigma_alpha_con)\\[", varnames(samples)), drop = FALSE])
+
+gelman.diag((samples[, grep("^beta_con\\[", varnames(samples)), drop=FALSE]))
 effectiveSize(samples_all[, grepl("beta_con", colnames(samples_all)), drop = FALSE])
 autocorr.diag(samples_all[, grepl("beta_con", colnames(samples_all)), drop = FALSE])
+
+gelman.diag((samples[, grep("^(mean_beta_con|sigma_beta_con)\\[", varnames(samples)), drop=FALSE]))
+effectiveSize(samples_all[, grep("^(mean_beta_con|sigma_beta_con)\\[", varnames(samples)), drop = FALSE])
+autocorr.diag(samples_all[, grep("^(mean_beta_con|sigma_beta_con)\\[", varnames(samples)), drop = FALSE])
+
 
 MCMCtrace(samples, params = "theta_inf", ISB = F, exact = F, pdf = F)
 MCMCtrace(samples, params = "theta_0", ISB = F, exact = F, pdf = F)
 
+MCMCtrace(samples, params = "alpha_con", ISB = F, exact = F, pdf = F)
 MCMCtrace(samples, params = "beta_con", ISB = F, exact = F, pdf = F)
 
-# plot
-## probability distributions
+##### plot
 
+## probability distributions
 
 densityplot_nimble <- function(samples, pattern, logscale = FALSE) {
   stopifnot(inherits(samples, "mcmc.list"))
@@ -363,10 +515,25 @@ densityplot_nimble(samples, "theta_0")
 densityplot_nimble(samples, "alpha_con")
 densityplot_nimble(samples, "beta_con")
 
+# extract variables for plotting
 
-#### Recovery time estimation ####
+sum_stats <- summary(samples)$statistics[, "Mean"]
 
-# extracting posterior samples for metrics
+theta_0_est   <- sum_stats[grep("^theta_0\\[", names(sum_stats))]
+theta_inf_est <- sum_stats[grep("^theta_inf\\[", names(sum_stats))]
+alpha_con_est <- sum_stats[grep("^alpha_con\\[", names(sum_stats))]
+beta_con_est  <- sum_stats[grep("^beta_con\\[", names(sum_stats))]
+
+# raw data:
+
+var_names <- colnames(dataSub)[-c(1:3)]
+
+plot_data <- rec_df %>%
+  mutate(VarName = factor(variable_rec, 
+                          levels = 1:constList$n_var, 
+                          labels = var_names))
+
+time_seq <- seq(0, max(plot_data$tx), length.out = 100)
 
 rec_conn <- dataSub$ConIndex[dataSub$type == "rec"]
 conn_values <- c(
@@ -375,7 +542,61 @@ conn_values <- c(
   High   = quantile(rec_conn, 0.75, na.rm = TRUE)
 )
 
+# Create an empty list to store curve data
+curve_list <- list()
+
+for(j in 1:9) {
+  
+  # Parameters for this specific variable
+  t0   <- unname(theta_0_est[j])
+  tinf <- unname(theta_inf_est[j])
+  a    <- unname(alpha_con_est[j])
+  b    <- unname(beta_con_est[j])
+  
+  # Calculate Lambda 
+  lambda  <- exp(a + b * conn_values[2]) 
+  
+  # Calculate Predicted Y
+  y_pred <- t0 + (tinf - t0) * (1 - exp(-lambda * time_seq))
+  
+  curve_list[[j]] <- data.frame(
+    VarName = var_names[j],
+    tx = time_seq,
+    Y_pred = y_pred,
+    theta_inf = tinf 
+  )
+}
+
+# Combine all curves into one dataframe
+curve_df <- do.call(rbind, curve_list)
+curve_df$VarName <- factor(curve_df$VarName, levels = var_names)
+
+ggplot() +
+  # 1. Plot the Raw Data Points
+  geom_point(data = plot_data, aes(x = tx, y = Y_rec, color = connectivity), alpha = 0.6) +
+  
+  # 2. Plot the Fitted Curve (Mean Connectivity)
+  geom_line(data = curve_df, aes(x = tx, y = Y_pred), size = 1, color = "black") +
+  
+  # 3. Plot the Asymptote (Optional but helpful)
+  geom_hline(data = distinct(curve_df, VarName, theta_inf), 
+             aes(yintercept = theta_inf), linetype = "dashed", color = "red") +
+  
+  # Aesthetics
+  scale_color_gradient2(low = "red", mid = "gray", high = "blue", midpoint = 0,
+                        name = "Connectivity\n(Scaled)") +
+  facet_wrap(~VarName, scales = "free_y") +
+  theme_bw() +
+  labs(x = "Recovery Time (years)", 
+       y = "Functional Diversity",
+       title = "Model Fit: Predicted Recovery vs. Observed Data",
+       subtitle = "Black line represents recovery at Selected Connectivity Level")
+
+#### Recovery time estimation ####
+
 w <- weights_df %>% pull(prctg) # check if order is the same as in the model_df data frame
+
+### extracting posterior samples for metrics
 
 t_multi_conn_pol <- lapply(conn_values, function(cn) {
   recovery_tmulti_nimble_w(samples, groups = 1:3, conn = cn, weights = w[1:3])
@@ -413,16 +634,7 @@ sum(is.na(t_f_structure_conn[[1]]))
 sum(is.na(t_f_structure_conn[[2]]))
 sum(is.na(t_f_structure_conn[[3]]))
 
-# extract variables for plotting
-
-theta_inf <- as.matrix(samples_all[ , grepl("^theta_inf\\[", colnames(samples_all)), drop = FALSE])
-theta_0   <- as.matrix(samples_all[ , grepl("^theta_0\\[",   colnames(samples_all)), drop = FALSE])
-alpha_con <- as.matrix(samples_all[ , grepl("^alpha_con\\[", colnames(samples_all)), drop = FALSE])
-beta_con  <- as.matrix(samples_all[ , grepl("^beta_con\\[",  colnames(samples_all)), drop = FALSE])
-mean_theta_inf  <- samples_all[, "mean_theta_inf"]
-sigma_theta_inf <- samples_all[, "sigma_theta_inf"]
-mean_theta_0    <- samples_all[, "mean_theta_0"]
-sigma_theta_0   <- samples_all[, "sigma_theta_0"]
+### credible intervals:
 
 qt90_multi_conn_pol <- lapply(t_multi_conn_pol, function(x) {
   quantile(x, probs = c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
@@ -451,9 +663,6 @@ qt90_f_structure_conn <- lapply(t_f_structure_conn, function(tmat) {
         na.rm = TRUE)
 })
 qt90_f_structure_conn
-
-sigmaSq_rec <- do.call(rbind, as.mcmc.list(samp1$sigmaSq_rec))
-sigmaSq_old <- do.call(rbind, as.mcmc.list(samp1$sigmaSq_old))
 
 
 colnames(t90) <- as.vector(outer(names(metricList_conn), names(metricList_conn[[1]]), paste, sep = "_"))

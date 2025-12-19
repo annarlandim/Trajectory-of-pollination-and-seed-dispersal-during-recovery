@@ -1,7 +1,3 @@
-library(dplyr)
-library(tidyr)
-
-library(psych)
 
 #### Data frames ####
 
@@ -15,6 +11,9 @@ int_bats <- read.csv(file = "data/processed/int_bats.csv")
 int_birds <- read.csv(file = "data/processed/int_birds.csv")
 int_nf <- read.csv(file = "data/processed/int_nf.csv")
 
+# Seedlings
+seedlings <- read.csv(file = "data/processed/seedlings_ind.csv")
+
 # Traits
 
 traits_bees <- read.csv(file = "data/processed/traits_bees.csv")
@@ -25,6 +24,7 @@ traits_birds <- read.csv(file = "data/processed/traits_birds.csv")
 traits_nf <- read.csv(file = "data/processed/traits_nf.csv")
 
 traits_plants <- read.csv(file = "data/processed/traits_plants.csv")
+traits_seedlings <- read.csv(file = "data/processed/traits_seedlings.csv")
 
 #### Plants per group:
 
@@ -152,15 +152,15 @@ int_bats_hbt <- int_bats %>%
             .groups = 'drop') %>%
   left_join(traits_bats, by = "animal_species", relationship = "many-to-many") %>%
   left_join(traits_plants, by = "plant_species", relationship = "many-to-many") %>%
-  mutate(LogGW = log(GapeWidth),LogFW = log(FruitWidth), LogH = log(Height), group = "Bats") %>%
+  mutate(LogBM = log(BodyMass), LogCM = log(CropMass), LogGW = log(GapeWidth),LogFW = log(FruitWidth), LogH = log(Height), group = "Bats") %>%
   mutate(    
-    # StdBM = as.numeric(scale(LogBM)),
-    # StdCM = as.numeric(scale(LogCM)),
+    StdBM = as.numeric(scale(LogBM)),
+    StdCM = as.numeric(scale(LogCM)),
     StdGW = as.numeric(scale(LogGW)),
     StdFW = as.numeric(scale(LogFW)),
     StdHWI = as.numeric(scale(HWIndex)),
     StdH = as.numeric(scale(LogH))) %>%
-  select(Treatment3, interaction, LogGW, LogFW, HWIndex, LogH, StdGW, StdFW, StdHWI, StdH, group)
+  select(Treatment3, interaction, LogBM, LogCM, LogGW, LogFW, HWIndex, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
 
 int_birds_hbt <- int_birds %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
@@ -172,15 +172,15 @@ int_birds_hbt <- int_birds %>%
             .groups = 'drop') %>%
   left_join(traits_birds, by = "animal_species", relationship = "many-to-many") %>%
   left_join(traits_plants, by = "plant_species", relationship = "many-to-many") %>%
-  mutate(LogGW = log(BeakWidth), LogFW = log(FruitWidth), LogH = log(Height), group = "Birds") %>%
+  mutate(LogBM = log(BodyMass), LogCM = log(CropMass), LogGW = log(BeakWidth), LogFW = log(FruitWidth), LogH = log(Height), group = "Birds") %>%
   mutate(    
-    # StdBM = as.numeric(scale(LogBM)),
-    # StdCM = as.numeric(scale(LogCM)),
+    StdBM = as.numeric(scale(LogBM)),
+    StdCM = as.numeric(scale(LogCM)),
     StdGW = as.numeric(scale(LogGW)),
     StdFW = as.numeric(scale(LogFW)),
     StdHWI = as.numeric(scale(HWIndex)),
     StdH = as.numeric(scale(LogH))) %>%
-  select(Treatment3, interaction, LogGW, LogFW, HWIndex, LogH, StdGW, StdFW, StdHWI, StdH, group)
+  select(Treatment3, interaction, LogBM, LogCM, LogGW, LogFW, HWIndex, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
 
 int_nf_hbt <- int_nf %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
@@ -192,15 +192,15 @@ int_nf_hbt <- int_nf %>%
             .groups = 'drop') %>%
   left_join(traits_nf, by = "animal_species", relationship = "many-to-many") %>%
   left_join(traits_plants, by = "plant_species", relationship = "many-to-many") %>%
-  mutate(LogGW = log(GapeWidth), LogFW = log(FruitWidth), LogH = log(Height), group = "NF") %>%
+  mutate(LogBM = log(BodyMass), LogCM = log(CropMass), LogGW = log(GapeWidth), LogFW = log(FruitWidth), LogH = log(Height), group = "NF") %>%
   mutate(    
-    # StdBM = as.numeric(scale(LogBM)),
-    # StdCM = as.numeric(scale(LogCM)),
+    StdBM = as.numeric(scale(LogBM)),
+    StdCM = as.numeric(scale(LogCM)),
     StdGW = as.numeric(scale(LogGW)),
     StdFW = as.numeric(scale(LogFW)),
     StdHWI = NA,
     StdH = as.numeric(scale(LogH))) %>%
-  select(Treatment3, interaction, LogGW, LogFW, LogH, StdGW, StdFW, StdHWI, StdH, group)
+  select(Treatment3, interaction, LogBM, LogCM, LogGW, LogFW, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
 
 int_bats_plot <- int_bats %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
@@ -234,6 +234,53 @@ int_nf_plot <- int_nf %>%
 
 int_sd_hbt <- bind_rows(int_bats_hbt, int_birds_hbt, int_nf_hbt)
 
+#### Seedlings
+
+### BETTER CHECK SEED DISPERSAL SYNDROME
+
+seedlings_hbt <- seedlings %>%
+  group_by(Species_name, Treatment3) %>%
+  filter(!Species_name %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
+                               "Borojoa_sp.", "Persea_americana")) %>%
+  filter(!Species_name %in% c("Coussapoa_villosa", "")) %>% # filter out non-zoochoric species based on Landim et al. 2026
+  summarise(Treatment3 = first(Treatment3), 
+            Species_name = first(Species_name), 
+            .groups = 'drop') %>%
+  left_join(traits_seedlings, by = "Species_name", relationship = "many-to-many") %>%
+  ungroup()%>%
+  mutate(Genus = word(Species_name, 1, sep = "_")) %>%
+  group_by(Genus) %>%
+  mutate(toughness_young = replace_na(data = toughness_young, replace = mean(toughness_young, na.rm = T)),
+         toughness_old = replace_na(data = toughness_old, replace = mean(toughness_old, na.rm = T)),
+         thickness_young = replace_na(data = thickness_young, replace = mean(thickness_young, na.rm = T)),
+         thickness_old = replace_na(data = thickness_old, replace = mean(thickness_old, na.rm = T)),
+         SLA_young = replace_na(data = SLA_young, replace = mean(SLA_young, na.rm = T)),
+         SLA_old = replace_na(data = SLA_old, replace = mean(SLA_old, na.rm = T)),
+         LDMC_young = replace_na(data = LDMC_young, replace = mean(LDMC_young, na.rm = T)),
+         LDMC_old = replace_na(data = LDMC_old, replace = mean(LDMC_old, na.rm = T))) %>%
+  ungroup() %>%
+  mutate(LogThoughY = log(toughness_young), LogThoughO = log(toughness_old), LogThickY = log(thickness_young), LogThickO = log(thickness_old)) %>%
+  mutate(    
+    StdThoughY = as.numeric(scale(LogThoughY)),
+    StdThoughO = as.numeric(scale(LogThoughO)),
+    StdThickY = as.numeric(scale(LogThickY)),
+    StdThickO = as.numeric(scale(LogThickO)),
+    StdSLAY = as.numeric(scale(SLA_young)),
+    StdSLAO = as.numeric(scale(SLA_old)),
+    StdLDMCY = as.numeric(scale(LDMC_young)),
+    StdLDMCO = as.numeric(scale(LDMC_old))) %>%
+  select(Treatment3, Species_name, LogThoughY, LogThoughO, LogThickY, LogThickO, SLA_young, SLA_old, LDMC_young, LDMC_old,
+         StdThoughY, StdThoughO, StdThickY, StdThickO, StdSLAY, StdSLAO, StdLDMCY, StdLDMCO)
+
+seedlings_plot <- seedlings %>%
+  group_by(Species_name, Treatment3) %>%
+  filter(!Species_name %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
+                               "Borojoa_sp.", "Persea_americana")) %>%
+  summarise(Treatment3 = first(Treatment3),
+            Plot_ID = first(Plot_ID), RegTime = first(RegTime),
+            Species_name = first(Species_name),
+            .groups = "drop") 
+
 #### Functional spaces per habitat ####
 
 #### Pollination
@@ -264,18 +311,18 @@ scores_pol$Treatment3 <-  factor(scores_pol$Treatment3,
 #### Seed-dispersal
 
 # # Number of components to be used:
-# cor <- cor.smooth(int_sd_hbt[, c("LogGW", "LogFW", "HWIndex", "LogH")])
+# cor <- cor.smooth(int_sd_hbt[, c("LogBM", "LogCM","LogGW", "LogFW", "HWIndex", "LogH")])
 # eigen <- eigen(cor)
-# permuted <- matrix(nrow=1000, ncol=4)
+# permuted <- matrix(nrow=1000, ncol=6)
 # for(i in 1:1000){
-#   permuted_data <- apply(int_sd_hbt[, c("LogGW", "LogFW", "HWIndex", "LogH")],2,sample)
+#   permuted_data <- apply(int_sd_hbt[, c("LogBM", "LogCM", "LogGW", "LogFW", "HWIndex", "LogH")],2,sample)
 #   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
 # }
 # thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
 # print(eigen$values)
 # print(thresholds)
 
-pca_sd <- principal(int_sd_hbt[, c("StdGW", "StdFW", "StdHWI", "StdH")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
+pca_sd <- principal(int_sd_hbt[, c("StdBM", "StdCM", "StdGW", "StdFW", "StdHWI", "StdH")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
 
 scores_sd <- as.data.frame(pca_sd$scores)
 scores_sd$Treatment3 <- int_sd_hbt$Treatment3
@@ -285,6 +332,30 @@ scores_sd <- scores_sd %>% dplyr::select(group, interaction, Treatment3, RC1, RC
 
 scores_sd$Treatment3 <-  factor(scores_sd$Treatment3,
                                   levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
+
+#### Seedlings
+
+# # Number of components to be used:
+# cor <- cor.smooth(seedlings_hbt[, c("LogThoughY", "LogThoughO", "LogThickY", "LogThickO", "SLA_young", "SLA_old", "LDMC_young", "LDMC_old")])
+# eigen <- eigen(cor)
+# permuted <- matrix(nrow=1000, ncol=8)
+# for(i in 1:1000){
+#   permuted_data <- apply(seedlings_hbt[, c("LogThoughY", "LogThoughO", "LogThickY", "LogThickO", "SLA_young", "SLA_old", "LDMC_young", "LDMC_old")],2,sample)
+#   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
+# }
+# thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
+# print(eigen$values)
+# print(thresholds)
+
+pca_sdlng <- principal(seedlings_hbt[, c("StdThoughY", "StdThoughO", "StdThickY", "StdThickO", "StdSLAY", "StdSLAO", "StdLDMCY", "StdLDMCO")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
+
+scores_sdlng <- as.data.frame(pca_sdlng$scores)
+scores_sdlng$Treatment3 <- seedlings_hbt$Treatment3
+scores_sdlng$Species_name <- seedlings_hbt$Species_name
+scores_sdlng <- scores_sdlng %>% dplyr::select(Species_name, Treatment3, RC1, RC2)
+
+scores_sdlng$Treatment3 <-  factor(scores_sdlng$Treatment3,
+                                levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
 
 #### Functional diversity ####
 
@@ -351,6 +422,31 @@ FD_nf <- orig_nf %>%
     FDNf = mean(orig),
     FC1Nf = mean(RC1),
     FC2Nf = mean(RC2),
+    .groups = "drop"
+  ) 
+
+#### Seedlings
+
+orig_sdlngs <- originality(seedlings_plot, scores_sdlng)
+
+TD_sdlngs <- seedlings %>%
+  group_by(Plot_ID) %>%
+  summarise(AbSdlng = n(),
+            RichSdlng = n_distinct(Species_name),
+            .groups = "drop")
+Shn_sdlngs <- seedlings %>%
+  count(Plot_ID, Species_name) %>%
+  group_by(Plot_ID) %>%
+  summarise(ShnSdlng = diversity(n, index = "shannon"),
+            .groups = "drop")
+
+
+FD_sdlngs <- orig_sdlngs %>%
+  group_by(Plot_ID) %>%
+  summarise(
+    FDSdlng = mean(orig),
+    FC1Sdlng = mean(RC1),
+    FC2Sdlng = mean(RC2),
     .groups = "drop"
   ) 
 
@@ -433,6 +529,15 @@ model_df <- expl %>% select(Treatment3, Plot_ID, RegTime) %>%
   left_join(FD_bat_pol, by = "Plot_ID") %>%
   left_join(FD_bats, by = "Plot_ID") %>%
   left_join(FD_birds, by = "Plot_ID") %>%
-  left_join(FD_nf, by = "Plot_ID") 
+  left_join(FD_nf, by = "Plot_ID") %>%
+  left_join(FD_sdlngs, by = "Plot_ID") %>%
+  left_join(TD_sdlngs, by = "Plot_ID") %>%
+  left_join(Shn_sdlngs, by = "Plot_ID") %>%
+  mutate(
+    across(
+      c(AbSdlng, RichSdlng, ShnSdlng),
+      ~ tidyr::replace_na(.x, 0)
+    )
+  )
 
 # write.csv(model_df, file = here::here("data", "processed", "model_df.csv"), row.names = F)

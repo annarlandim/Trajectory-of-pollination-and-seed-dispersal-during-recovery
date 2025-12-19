@@ -10,9 +10,31 @@ renv::activate()
 if (!requireNamespace("here", quietly = TRUE)) install.packages("here")
 library(here)
 
+pkgs <- c(
+  "dplyr",
+  "tidyr",
+  "stringr",
+  "psych",
+  "ggplot2",
+  "patchwork",
+  "purrr",
+  "nimble",
+  "coda",
+  "lattice",
+  "MCMCvis",
+  "vegan"
+)
+
+missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
+if (length(missing)) install.packages(missing)
+
+lapply(pkgs, library, character.only = TRUE)
+
+renv::snapshot()
+
 # Source utility functions
 utils_files <- list.files(here("R"), pattern = "\\.R$", full.names = TRUE)
-invisible(lapply(utils_files, source))
+lapply(utils_files, source)
 
 # Run workflow steps
 source(here("workflow", "01_data_preparation.R"))

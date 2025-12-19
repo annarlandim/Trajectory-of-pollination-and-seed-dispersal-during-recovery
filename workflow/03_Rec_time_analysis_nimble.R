@@ -1,20 +1,10 @@
-library(dplyr)
-library(tidyr)
-library(purrr)
-
-library(nimble)
-library(coda)
-library(lattice)
-library(MCMCvis)
-
-
 #### Data ####
 
 data <- read.csv("data/processed/model_df.csv")
 
 weights_df <- read.csv("data/processed/weights_df.csv")
 
-data <- data %>% mutate(ConIndex = scale(ConIndex))
+data <- data %>% mutate(ConIndex = as.numeric(scale(ConIndex)))
 
 data$type <- factor(ifelse(1:nrow(data) %in% grep("OG", data$Plot_ID), "old", "rec"),
                      levels = c("old", "rec"))
@@ -22,20 +12,10 @@ data$type <- factor(ifelse(1:nrow(data) %in% grep("OG", data$Plot_ID), "old", "r
 dataSub <- subset(data, select = c(type, RegTime, ConIndex,  
                                    FDBees, FC1Bees, FC2Bees, FDMoths, FC1Moths, FC2Moths, FDBat_pol, FC1Bat_pol, FC2Bat_pol,
                                    FDBats, FC1Bats, FC2Bats, FDBirds, FC1Birds, FC2Birds, FDNf, FC1Nf, FC2Nf,
-                                   VerticalVH, MaxTH, AGB))
-
+                                   FDSdlng, FC1Sdlng, FC2Sdlng, AbSdlng, RichSdlng, ShnSdlng,
+                                   VerticalVH, MaxTH, AGB)) 
 table(dataSub$type)
 str(dataSub)
-
-zeros <- dataSub %>% 
-  map_lgl(~ any(. == 0, na.rm = TRUE))
-
-# to avoid problems with log(0)
-eps <- 1e-6
-dataSub$VerticalVH <- pmax(dataSub$VerticalVH, eps)
-dataSub$MaxTH      <- pmax(dataSub$MaxTH, eps)
-dataSub$AGB        <- pmax(dataSub$AGB, eps)
-
 
 # plot the data
 
@@ -57,29 +37,83 @@ plot(MaxTH ~ RegTime, dataSub)
 plot(AGB ~ RegTime, dataSub)
 dev.off()
 
+par(mfrow = c(1, 4))
+plot(AbSdlng ~ RegTime, dataSub)
+plot(RichSdlng ~ RegTime, dataSub)
+plot(ShnSdlng ~ RegTime, dataSub)
+plot(FDSdlng ~ RegTime, dataSub)
+dev.off()
+
 # define data for jags model
 
-# remove in the future. problem with (log(negative))
 dataSub <- dataSub %>%
-  select(-FC1Bees, -FC2Bees, -FC1Moths, -FC2Moths, -FC1Bat_pol, -FC2Bat_pol, -FC1Bats, -FC2Bats, -FC1Birds, -FC2Birds, -FC1Nf, -FC2Nf)
+  select(-FC1Bees, -FC2Bees, -FC1Moths, -FC2Moths, -FC1Bat_pol, -FC2Bat_pol, -FC1Bats, -FC2Bats, -FC1Birds, -FC2Birds, -FC1Nf, -FC2Nf, -FC1Sdlng, -FC2Sdlng) %>%
+  mutate(across(
+    .cols = -c(1:3),     
+    # scaling by dividing the max per column.
+    # this is the best for logscale, where negatives are not allowed
+    .fns = ~ .x / max(.x, na.rm = TRUE) 
+  ))
+
 str(dataSub)
+
+zeros <- dataSub %>% 
+  map_lgl(~ any(. == 0, na.rm = TRUE))
+print(zeros)
+
+# to avoid problems with log(0)
+eps <- 1e-6
+dataSub$AbSdlng <- pmax(dataSub$AbSdlng, eps)
+dataSub$RichSdlng <- pmax(dataSub$RichSdlng, eps)
+dataSub$ShnSdlng <- pmax(dataSub$ShnSdlng, eps)
+dataSub$VerticalVH <- pmax(dataSub$VerticalVH, eps)
+dataSub$MaxTH      <- pmax(dataSub$MaxTH, eps)
+dataSub$AGB        <- pmax(dataSub$AGB, eps)
 
 long <- dataSub %>%
   pivot_longer(cols = -c(1:3), names_to = "variable", values_to = "value") %>%
   mutate(variable = factor(variable, levels = colnames(dataSub)[-c(1:3)]), variable = as.integer(variable)) %>%
   filter(!is.na(value))
 
+# mu_old_vec <- long %>%
+#   filter(type == "old") %>%
+#   group_by(variable) %>%
+#   summarise(mulog = median(log(value), na.rm = TRUE), .groups = "drop") %>%
+#   pull(mulog)
+# 
 sd_old_vec <- long %>%
   filter(type == "old") %>%
   group_by(variable) %>%
   summarise(sdlog = sd(log(value), na.rm = TRUE), .groups = "drop") %>%
   pull(sdlog)
 
+# to avoid very tiny sds:
+sd_old_vec <- pmax(sd_old_vec, 0.2)
+
+# mu_0_vec <- long %>%
+#   filter(RegTime == 0) %>%
+#   group_by(variable) %>%
+#   summarise(mu0 = median(log(value), na.rm = TRUE), .groups = "drop") %>%
+#   pull(mu0)
+# 
+# sd_0_vec <- long %>%
+#   filter(RegTime == 0) %>%
+#   group_by(variable) %>%
+#   summarise(s0 = sd(log(value), na.rm = TRUE), .groups = "drop") %>%
+#   pull(s0)
+
 sd_rec_vec <- long %>%
   filter(type == "rec") %>%
   group_by(variable) %>%
   summarise(sdlog = sd(log(value), na.rm = TRUE), .groups = "drop") %>%
   pull(sdlog)
+
+sd_rec_vec <- pmax(sd_rec_vec, 0.2)
+
+# Not enough data to estimate sd for non-flying mammals (n=1)
+# sd_0_vec[!is.finite(sd_0_vec) ] <- sd_rec_vec[!is.finite(sd_0_vec) ]
+
+# sd_0_vec <- pmax(sd_0_vec, 0.2)
 
 old_df <- long %>%
   filter(type == "old") %>%
@@ -95,26 +129,30 @@ rec_df <- long %>%
     connectivity = ConIndex
   )
 
-group_index_vec <- c(1, 1, 1, 2, 2, 2, 3, 3, 3)
+group_index_vec <- c(1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4)
 
 constList <- list(
+  variable_old = old_df$variable_old,
+  variable_rec = rec_df$variable_rec,
   n_var = ncol(dataSub) - 3,
-  n_groups = 3,          # mudar quando add as plantulas
+  n_groups = 4,          # mudar quando add as plantulas
   group_index = group_index_vec,
   n_old = nrow(old_df),
-  n_rec = nrow(rec_df),
-  variable_old = old_df$variable_old,
-  variable_rec = rec_df$variable_rec
+  n_rec = nrow(rec_df)
 )
 
 dataList <- list(
   Y_old = old_df$Y_old,
+  # mu_old = mu_old_vec,
   s_old = sd_old_vec,
+  # mu_0 = mu_0_vec,
+  # s_0 = sd_0_vec,
   Y_rec = rec_df$Y_rec,
   s_rec = sd_rec_vec,
   tx = rec_df$tx,
   connectivity = as.numeric(rec_df$connectivity)
 )
+
 
 #### Model ####
 
@@ -127,19 +165,19 @@ code_stratified <- nimbleCode({
   for(k in 1:n_groups){
     
     # --- theta_inf ---
-    mean_theta_inf[k]  ~ dnorm(0, sd = 1)
-    sigma_theta_inf[k] ~ T(dt(mu = 0, tau = 1, df = 3), 0, Inf)
+    mean_theta_inf[k]  ~ dnorm(0, sd = 2)
+    sigma_theta_inf[k] ~ dexp(0.5)
     
     # --- theta_0 ---
-    mean_theta_0[k]    ~ dnorm(0, sd = 1)
-    sigma_theta_0[k]   ~ T(dt(mu = 0, tau = 1, df = 3), 0, Inf)
+    mean_theta_0[k]    ~ dnorm(0, sd = 2)
+    sigma_theta_0[k]   ~ dexp(0.5)
     
     # --- Connectivity (alpha and beta) ---
-    mean_alpha_con[k]  ~ dnorm(0, sd = 1)
-    sigma_alpha_con[k] ~ T(dt(mu = 0, tau = 1, df = 3), 0, Inf)
+    mean_alpha_con[k]  ~ dnorm(0, sd = 2)
+    sigma_alpha_con[k] ~ T(dt(0, tau = 1, df = 3), 0, Inf)
     
-    mean_beta_con[k]   ~ dnorm(0, sd = 1)
-    sigma_beta_con[k]  ~ T(dt(mu = 0, tau = 1, df = 3), 0, Inf)
+    mean_beta_con[k]   ~ dnorm(0, sd = 2)
+    sigma_beta_con[k]  ~  T(dt(0, tau = 1, df = 3), 0, Inf)
   }
   
   ################################
@@ -156,7 +194,7 @@ code_stratified <- nimbleCode({
         beta_inf_raw[j] * sigma_theta_inf[ group_index[j] ]
     )
     # priors on variance components:
-    sigma_raw_old[j] ~ T(dt(mu = 0, tau = 1, df = 3), 0, Inf)
+    sigma_raw_old[j] ~ dexp(0.5)
     sigma_old[j] <- s_old[j] * sigma_raw_old[j] # scale by observed sd
     tau_old[j] <- 1/pow(sigma_old[j], 2)
   }
@@ -171,7 +209,7 @@ code_stratified <- nimbleCode({
         beta_0_raw[j] * sigma_theta_0[ group_index[j] ]
     )
     # priors on variance components:
-    sigma_raw_rec[j] ~ T(dt(mu = 0, tau = 1, df = 3), 0, Inf)
+    sigma_raw_rec[j] ~ dexp(0.5)
     sigma_rec[j] <- s_rec[j] * sigma_raw_rec[j] # scale by observed sd
     tau_rec[j] <- 1/pow(sigma_rec[j], 2)
   }
@@ -312,6 +350,7 @@ code <- nimbleCode({
 })
 
 # function to set initial values
+
 initsFun_strat <- function(constList, dataList) {
   n_var <- constList$n_var
   n_groups <- constList$n_groups # <--- IMPORTANTE: Pegar o número de grupos (3)
@@ -325,10 +364,10 @@ initsFun_strat <- function(constList, dataList) {
     mean_alpha_con  = rnorm(n_groups, 0, 0.1),
     mean_beta_con   = rnorm(n_groups, 0, 0.1),
     
-    sigma_theta_inf = runif(n_groups, 0.5, 1.5),
-    sigma_theta_0   = runif(n_groups, 0.5, 1.5),
-    sigma_alpha_con = runif(n_groups, 0.5, 1.5),
-    sigma_beta_con  = runif(n_groups, 0.5, 1.5),
+    sigma_theta_inf = rexp(n_groups, 1),
+    sigma_theta_0   = rexp(n_groups, 1),
+    sigma_alpha_con = rexp(n_groups, 1),
+    sigma_beta_con  = rexp(n_groups, 1),
     
     # --- PARÂMETROS POR VARIÁVEL (Continuam iguais, tamanho n_var) ---
     beta_inf_raw  = rnorm(n_var, 0, 1),
@@ -337,10 +376,11 @@ initsFun_strat <- function(constList, dataList) {
     beta_con_raw  = rnorm(n_var, 0, 1),
     
     # --- ERROS DE OBSERVAÇÃO (Continuam iguais, tamanho n_var) ---
-    sigma_raw_old = runif(n_var, 0.5, 1.5),
-    sigma_raw_rec = runif(n_var, 0.5, 1.5)
+    sigma_raw_old = rexp(n_var, 1),
+    sigma_raw_rec = rexp(n_var, 1)
   )
 }
+
 initsFun <- function(constList, dataList) {
   n_var <- constList$n_var
   
@@ -375,7 +415,8 @@ monitorList <- c(
   "mean_theta_inf", "sigma_theta_inf",
   "mean_theta_0",   "sigma_theta_0",
   "mean_alpha_con", "sigma_alpha_con",
-  "mean_beta_con",  "sigma_beta_con"
+  "mean_beta_con",  "sigma_beta_con",
+  "sigma_old", "sigma_rec"
 )
 
 # bundle the data for nimble
@@ -422,7 +463,7 @@ mcmcC <- compileNimble(mcmcR, project = modelR)
 # run the MCMC algorithm
 samples <- runMCMC(
   mcmc = mcmcC,
-  niter = 2e5,
+  niter = 5e4,
   nburnin = 1e3,
   thin = 1e2,
   nchains = 5,
@@ -431,6 +472,7 @@ samples <- runMCMC(
 
 summary(samples)
 
+# use the median of the posterior as the intivalues. doesnt have to be a funciton, but I need to se how it is 
 samples_all <- as.mcmc(do.call(rbind, samples))
 colnames(samples_all)
 
@@ -449,9 +491,6 @@ gelman_log <- function(samples_list, pattern) {
   }))
   return(gelman.diag(samples_log))
 }
-
-
-gelman.diag(samples)
 
 gelman_log(samples, "^theta_inf")
 effectiveSize(log(samples_all[, grepl("^theta_inf\\[", colnames(samples_all)), drop = FALSE]))
@@ -494,27 +533,6 @@ MCMCtrace(samples, params = "beta_con", ISB = F, exact = F, pdf = F)
 
 ##### plot
 
-## probability distributions
-
-densityplot_nimble <- function(samples, pattern, logscale = FALSE) {
-  stopifnot(inherits(samples, "mcmc.list"))
-  
-  vars <- varnames(samples)               # colnames
-  idx  <- grep(pattern, vars)
-  sub  <- samples[, idx]                  
-  
-  if (logscale) {
-    densityplot(sub, scale = list(x = list(log = 10)))
-  } else {
-    densityplot(sub)
-  }
-}
-
-densityplot_nimble(samples, "theta_inf")
-densityplot_nimble(samples, "theta_0")
-densityplot_nimble(samples, "alpha_con")
-densityplot_nimble(samples, "beta_con")
-
 # extract variables for plotting
 
 sum_stats <- summary(samples)$statistics[, "Mean"]
@@ -532,8 +550,6 @@ plot_data <- rec_df %>%
   mutate(VarName = factor(variable_rec, 
                           levels = 1:constList$n_var, 
                           labels = var_names))
-
-time_seq <- seq(0, max(plot_data$tx), length.out = 100)
 
 rec_conn <- dataSub$ConIndex[dataSub$type == "rec"]
 conn_values <- c(
@@ -625,10 +641,19 @@ sum(is.na(t_per_group_conn_sd[[1]]))
 sum(is.na(t_per_group_conn_sd[[2]]))
 sum(is.na(t_per_group_conn_sd[[3]]))
 
+# seedlings:
+
+t_seedlings_conn <- lapply(conn_values, function(cn) {
+  recovery_tmulti_per_group_nimble(samples, groups = 7:10, conn = cn)
+})
+sum(is.na(t_seedlings_conn[[1]]))
+sum(is.na(t_seedlings_conn[[2]]))
+sum(is.na(t_seedlings_conn[[3]]))
+
 # forest structure:
 
 t_f_structure_conn <- lapply(conn_values, function(cn) {
-  recovery_tmulti_per_group_nimble(samples, groups = 7:9, conn = cn)
+  recovery_tmulti_per_group_nimble(samples, groups = 11:13, conn = cn)
 })
 sum(is.na(t_f_structure_conn[[1]]))
 sum(is.na(t_f_structure_conn[[2]]))
@@ -647,7 +672,7 @@ qt90_per_group_conn_pol <- lapply(t_per_group_conn_pol, function(tmat) {
 })
 qt90_per_group_conn_pol
 
-qt90_multi_conn_sd <- lapply(t_multi_conn_pol, function(x) {
+qt90_multi_conn_sd <- lapply(t_multi_conn_sd, function(x) {
   quantile(x, probs = c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
 })
 qt90_multi_conn_sd
@@ -657,6 +682,12 @@ qt90_per_group_conn_sd <- lapply(t_per_group_conn_sd, function(tmat) {
         na.rm = TRUE)
 })
 qt90_per_group_conn_sd
+
+qt90_seedlings_conn <- lapply(t_seedlings_conn, function(tmat) {
+  apply(tmat, 2, quantile, probs = c(0.05, 0.25, 0.5, 0.75, 0.95),
+        na.rm = TRUE)
+})
+qt90_seedlings_conn
 
 qt90_f_structure_conn <- lapply(t_f_structure_conn, function(tmat) {
   apply(tmat, 2, quantile, probs = c(0.05, 0.25, 0.5, 0.75, 0.95),

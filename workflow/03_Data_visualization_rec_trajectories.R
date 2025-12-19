@@ -1,13 +1,9 @@
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(patchwork) # To combine plots
 
 # --- 1. PREPARE RAW DATA ---
 # Extract Old Growth data for plotting
 raw_og_data <- long %>%
   filter(type == "old") %>%
-  mutate(VarName = factor(variable, levels = 1:9, labels = var_names))
+  mutate(VarName = factor(variable, levels = 1:13, labels = var_names))
 
 # Extract Recovery data
 raw_rec_data <- plot_data # From previous steps
@@ -70,10 +66,12 @@ t90_df$Connectivity <- factor(t90_df$Connectivity, levels = c("Low", "Mean", "Hi
 time_seq <- seq(0, max_time, length.out = 100)
 # Lista para guardar as iterações (Spaghetti)
 full_spag_list <- list()
+# For the posterior estimates of OG:
+og_est_list <- list()
 # Lista para guardar a mediana (Linha Preta)
 median_list <- list()
 
-for(j in 1:9) {
+for(j in 1:13) {
   var_name <- var_names[j]
   
   # Extrair parâmetros (usando as sub_chains de 500 amostras que você já tem ou criando novas)
@@ -107,21 +105,29 @@ for(j in 1:9) {
   
   full_spag_list[[j]] <- long_iter
   
+  og_est_list[[j]] <- data.frame(
+    VarName = var_names[j],
+    tx = og_center,
+    Y_med = median(col_tinf),
+    Y_lo = quantile(col_tinf, 0.025),
+    Y_hi = quantile(col_tinf, 0.975)
+  )
+  
   # --- 2. Salvar Mediana (Para a linha preta grossa) ---
   med_curve <- apply(mat_curves, 2, median)
   median_list[[j]] <- data.frame(VarName = var_name, tx = time_seq, Y_pred = med_curve)
 }
 
-median_lines_df <- do.call(rbind, spag_list)
-og_est_df <- do.call(rbind, og_est_list)
 
 # Consolidar os dataframes
 spaghetti_df <- do.call(rbind, full_spag_list) 
 median_lines_df <- do.call(rbind, median_list)
+og_est_df <- do.call(rbind, og_est_list)
 
 # Garantir que os fatores estão na ordem certa
 spaghetti_df$VarName <- factor(spaghetti_df$VarName, levels = var_names)
 median_lines_df$VarName <- factor(median_lines_df$VarName, levels = var_names)
+og_est_df$VarName <- factor(og_est_df$VarName, levels = var_names)
 
 # 2. CREATE THE MAIN PLOT
 p_traj <- ggplot() +
@@ -190,7 +196,8 @@ plot_subset <- function(indices, title_suffix) {
     geom_line(data = sub_median, aes(x = tx, y = Y_pred), size = 1.2, color = "black") +
     
     # --- C. PONTOS DE DADOS (RECUPERAÇÃO) ---
-    geom_point(data = sub_raw_rec, aes(x = tx, y = Y_rec, fill = connectivity), 
+    geom_point(data = sub_raw_rec, aes(x = tx, y = Y_rec#, fill = connectivity
+                                       ), 
                shape = 21, size = 2, alpha = 0.8) +
     
     # --- D. SEPARADOR E OLD GROWTH ---
@@ -208,11 +215,10 @@ plot_subset <- function(indices, title_suffix) {
              vjust = -0.5, size = 3, fontface = "italic") +
     
     # --- E. ESTÉTICA ---
-    scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0, name = "Connectivity") +
+    # scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0, name = "Connectivity") +
     facet_wrap(~VarName, scales = "free_y", ncol = 1, strip.position = "top") + 
     theme_classic() +
-    labs(x = "Time (years)", y = "Functional Diversity", 
-         title = paste("Recovery Trajectories -", title_suffix)) +
+    labs(x = "Time (years)", y = "Functional Diversity") +
     coord_cartesian(xlim = c(0, og_center + gap_width))
   
   return(p)
@@ -228,6 +234,10 @@ print(plot_group1)
 plot_group2 <- plot_subset(4:6, "Grupo 2 (Dispersores)")
 print(plot_group2)
 
-# Grupo 3: Estrutura (ou o que for 7:9)
-plot_group3 <- plot_subset(7:9, "Grupo 3 (Estrutura)")
+# Grupo 4: Estrutura (ou o que for 7:9)
+plot_group3 <- plot_subset(7:10, "Grupo 3 (Seedlings)")
 print(plot_group3)
+
+# Grupo 4: Estrutura (ou o que for 7:9)
+plot_group4 <- plot_subset(11:13, "Grupo 3 (Estrutura)")
+print(plot_group4)

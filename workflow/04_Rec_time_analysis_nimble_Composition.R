@@ -5,9 +5,8 @@ library(purrr)
 library(nimble)
 library(coda)
 library(lattice)
+library(MCMCvis)
 
-# library(rjags)
-# load.module("glm")
 
 #### Data ####
 
@@ -28,8 +27,6 @@ dataSub <- subset(data, select = c(type, RegTime, ConIndex,
 table(dataSub$type)
 str(dataSub)
 
-zeros <- dataSub %>% 
-  map_lgl(~ any(. == 0, na.rm = TRUE))
 
 # plot the data
 
@@ -61,7 +58,15 @@ dev.off()
 
 # remove in the future. problem with (log(negative))
 dataSub <- dataSub %>%
-  select(-FDBees, -FDMoths, -FDBat_pol, -FDBats, -FDBirds, -FDNf, -VerticalVH, -MaxTH, -AGB)
+  select(-FDBees, -FDMoths, -FDBat_pol, -FDBats, -FDBirds, -FDNf, -VerticalVH, -MaxTH, -AGB) %>%
+  mutate(across(
+    .cols = -c(1:3),
+    .fns = ~ as.numeric(scale(.x))
+  ))
+
+zeros <- dataSub %>% 
+  map_lgl(~ any(. == 0, na.rm = TRUE))
+zeros
 
 long <- dataSub %>%
   pivot_longer(cols = -c(1:3), names_to = "variable", values_to = "value") %>%
@@ -71,14 +76,17 @@ long <- dataSub %>%
 sd_old_vec <- long %>%
   filter(type == "old") %>%
   group_by(variable) %>%
-  summarise(sdlog = sd(log(value), na.rm = TRUE), .groups = "drop") %>%
-  pull(sdlog)
+  summarise(sd = sd(value, na.rm = TRUE), .groups = "drop") %>%
+  pull(sd)
+
+# to avoid very tiny sds:
+sd_old_vec <- pmax(sd_old_vec, 0.2)
 
 sd_rec_vec <- long %>%
   filter(type == "rec") %>%
   group_by(variable) %>%
-  summarise(sdlog = sd(log(value), na.rm = TRUE), .groups = "drop") %>%
-  pull(sdlog)
+  summarise(sd = sd(value, na.rm = TRUE), .groups = "drop") %>%
+  pull(sd)
 
 old_df <- long %>%
   filter(type == "old") %>%
@@ -94,8 +102,12 @@ rec_df <- long %>%
     connectivity = ConIndex
   )
 
+group_index_vec <- c(1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2)
+
 constList <- list(
   n_var = ncol(dataSub) - 3, # removing plot_id, reg_time and con_index
+  n_groups = 2,          # mudar quando add as plantulas
+  group_index = group_index_vec,
   n_old = nrow(old_df),
   n_rec = nrow(rec_df),
   variable_old = old_df$variable_old,
@@ -112,6 +124,110 @@ dataList <- list(
 )
 
 #### Model ####
+
+code_gaussian_stratified <- nimbleCode({
+  
+  ################
+  #  Hyperpriors # 
+  ################
+  
+  for(k in 1:n_groups){
+    
+    # --- theta_inf ---
+    mean_theta_inf[k]  ~ dnorm(0, sd = 10)
+    sigma_theta_inf[k] ~ dexp(1)
+    
+    # --- theta_0 ---
+    mean_theta_0[k]    ~ dnorm(0, sd = 10)
+    sigma_theta_0[k]   ~ dexp(1)
+    
+    # --- Connectivity (alpha and beta) ---
+    mean_alpha_con[k]  ~ dnorm(0, sd = 1)
+    sigma_alpha_con[k] ~ dexp(1)
+    
+    mean_beta_con[k]   ~ dnorm(0, sd = 1)
+    sigma_beta_con[k]  ~ dexp(1)
+  }
+  
+  ################################
+  #   Parameters per variable j  #
+  ################################
+  
+  # --- theta_inf ---
+  
+  for(j in 1:n_var){
+    beta_inf_raw[j] ~ dnorm(0, sd = 1)
+    # asymptote per group, original scale (always > 0)
+    theta_inf[j] <- 
+      mean_theta_inf[ group_index[j] ] + 
+        beta_inf_raw[j] * sigma_theta_inf[ group_index[j] ]
+    
+    # priors on variance components:
+    sigma_raw_old[j] ~ dexp(1)
+    sigma_old[j] <- s_old[j] * sigma_raw_old[j] # scale by observed sd
+    tau_old[j] <- 1/pow(sigma_old[j], 2)
+  }
+  
+  # --- theta_0 ---
+  
+  for(j in 1:n_var){
+    beta_0_raw[j] ~ dnorm(0, sd = 1)
+    # asymptote per group, original scale (always > 0)
+    theta_0[j] <- 
+      mean_theta_0[ group_index[j] ] + 
+        beta_0_raw[j] * sigma_theta_0[ group_index[j] ]
+    
+    # priors on variance components:
+    sigma_raw_rec[j] ~ dexp(1)
+    sigma_rec[j] <- s_rec[j] * sigma_raw_rec[j] # scale by observed sd
+    tau_rec[j] <- 1/pow(sigma_rec[j], 2)
+  }
+  
+  
+  # --- alpha_con, beta_con ---
+  
+  for (j in 1:n_var) {
+    alpha_con_raw[j] ~ dnorm(0, sd = 1)
+    alpha_con[j] <- mean_alpha_con[ group_index[j] ] + 
+      alpha_con_raw[j] * sigma_alpha_con[ group_index[j] ]
+    
+    beta_con_raw[j] ~ dnorm(0, sd = 1)
+    beta_con[j] <- mean_beta_con[ group_index[j] ] + 
+      beta_con_raw[j] * sigma_beta_con[ group_index[j] ]
+  }
+  
+  ##########################
+  # Likelihoods            #
+  ##########################
+  
+  # old-growth
+  for (i in 1:n_old) {
+    # parameterization reminder:
+    # meanlog = log(theta_inf[group]), sdlog = sigma_old[group]
+    Y_old[i] ~ dnorm(mean = theta_inf[ variable_old[i] ],
+                      sd = sigma_old[ variable_old[i] ])
+  }
+  
+  # recovering forests
+  for (i in 1:n_rec) {
+    
+    # recovery trajectories per group
+    mu_rec[i] <-
+      theta_0[ variable_rec[i] ] +
+      (theta_inf[ variable_rec[i] ] - theta_0[ variable_rec[i] ]) *
+      (1 - exp(-lambda[i] * tx[i]))
+    
+    # recovery rate (lambda) according to connectivity:
+    lambda[i] <- exp(
+      alpha_con[ variable_rec[i] ] +
+        beta_con[  variable_rec[i] ] * connectivity[i]
+    )
+    
+    Y_rec[i] ~ dnorm(mean = mu_rec[i],
+                      sd = sigma_rec[ variable_rec[i] ])
+  }
+  
+})
 
 code_gaussian <- nimbleCode({
   
@@ -172,7 +288,7 @@ code_gaussian <- nimbleCode({
   # old-growth
   for (i in 1:n_old) {
     Y_old[i] ~ dnorm(mean = theta_inf[ variable_old[i] ],
-                      sdlog = sigma_old[ variable_old[i] ])
+                      sd = sigma_old[ variable_old[i] ])
   }
   
   for (i in 1:n_rec) {
@@ -194,6 +310,38 @@ code_gaussian <- nimbleCode({
 })
 
 # function to set initial values
+
+initsFun_gaussian_strat <- function(constList, dataList) {
+  n_var <- constList$n_var
+  n_groups <- constList$n_groups # <--- IMPORTANTE: Pegar o número de grupos (3)
+  
+  list(
+    # --- HIPERPARÂMETROS (Agora são vetores de tamanho n_groups) ---
+    # Antes era apenas 0 ou runif(1), agora geramos um valor para cada grupo
+    
+    mean_theta_inf  = rnorm(n_groups, 0, 0.5), 
+    mean_theta_0    = rnorm(n_groups, 0, 0.5),
+    mean_alpha_con  = rnorm(n_groups, 0, 0.5),
+    mean_beta_con   = rnorm(n_groups, 0, 0.5),
+    
+    sigma_theta_inf = rexp(n_groups, 1),
+    sigma_theta_0   = rexp(n_groups, 1),
+    sigma_alpha_con = rexp(n_groups, 1),
+    sigma_beta_con  = rexp(n_groups, 1),
+    
+    # --- PARÂMETROS POR VARIÁVEL (Continuam iguais, tamanho n_var) ---
+    beta_inf_raw  = rnorm(n_var, 0, 1),
+    beta_0_raw    = rnorm(n_var, 0, 1),
+    alpha_con_raw = rnorm(n_var, 0, 1),
+    beta_con_raw  = rnorm(n_var, 0, 1),
+    
+    # --- ERROS DE OBSERVAÇÃO (Continuam iguais, tamanho n_var) ---
+    sigma_raw_old = rexp(n_var, 1),
+    sigma_raw_rec = rexp(n_var, 1)
+  )
+}
+
+
 initsFun_gaussian <- function(constList, dataList) {
   n_var <- constList$n_var
   
@@ -228,13 +376,14 @@ monitorList <- c(
   "mean_theta_inf", "sigma_theta_inf",
   "mean_theta_0",   "sigma_theta_0",
   "mean_alpha_con", "sigma_alpha_con",
-  "mean_beta_con",  "sigma_beta_con"
+  "mean_beta_con",  "sigma_beta_con",
+  "sigma_old", "sigma_rec"
 )
 
 # bundle the data for nimble
 nimbleList <- list(
-  code = code_gaussian,
-  initsFun = initsFun_gaussian,
+  code = code_gaussian_stratified,
+  initsFun = initsFun_gaussian_strat,
   constList = constList,
   dataList = dataList,
   monitorList = monitorList
@@ -242,10 +391,10 @@ nimbleList <- list(
 
 # set up model
 modelR <- nimbleModel(
-  code = code_gaussian,
+  code = code_gaussian_stratified,
   constants = constList,
   data = dataList,
-  inits = initsFun_gaussian(constList, dataList),
+  inits = initsFun_gaussian_strat(constList, dataList),
   calculate = FALSE
 )
 #modelR$initializeInfo()
@@ -269,15 +418,15 @@ mcmcR <- buildMCMC(mcmcConf)
 
 # compile model, functions, set initial values and compile MCMC sampler
 modelC <- compileNimble(modelR)
-modelC$setInits(initsFun(constList, dataList))
+modelC$setInits(initsFun_gaussian_strat(constList, dataList))
 mcmcC <- compileNimble(mcmcR, project = modelR)
 
 # run the MCMC algorithm
 samples_gaussian <- runMCMC(
   mcmc = mcmcC,
-  niter = 6e4,
-  nburnin = 5e3,
-  thin = 1e1,
+  niter = 2e4,
+  nburnin = 1e2,
+  thin = 3e1,
   nchains = 5,
   samplesAsCodaMCMC = TRUE
 )
@@ -289,8 +438,8 @@ colnames(samples_gaussian_all)
 
 # diagnostics
 
-gelman.diag(samples_gaussian)
 
+gelman.diag(samples_gaussian[, grep("theta_inf", varnames(samples_gaussian)), drop=FALSE])
 effectiveSize(samples_gaussian_all[, grepl("theta_inf", colnames(samples_gaussian_all)), drop = FALSE])
 autocorr.diag(samples_gaussian_all[, grepl("theta_inf", colnames(samples_gaussian_all)), drop = FALSE])
 
@@ -303,32 +452,32 @@ autocorr.diag(samples_gaussian_all[, grepl("alpha_con", colnames(samples_gaussia
 effectiveSize(samples_gaussian_all[, grepl("beta_con", colnames(samples_gaussian_all)), drop = FALSE])
 autocorr.diag(samples_gaussian_all[, grepl("beta_con", colnames(samples_gaussian_all)), drop = FALSE])
 
+MCMCtrace(samples_gaussian, params = "theta_inf", ISB = F, exact = F, pdf = F)
+MCMCtrace(samples_gaussian, params = "theta_0", ISB = F, exact = F, pdf = F)
+
+MCMCtrace(samples_gaussian, params = "alpha_con", ISB = F, exact = F, pdf = F)
+MCMCtrace(samples_gaussian, params = "beta_con", ISB = F, exact = F, pdf = F)
+
 # plot
 ## probability distributions
 
+# extract variables for plotting
 
-densityplot_nimble <- function(samples, pattern, logscale = FALSE) {
-  stopifnot(inherits(samples, "mcmc.list"))
-  
-  vars <- varnames(samples)               # colnames
-  idx  <- grep(pattern, vars)
-  sub  <- samples[, idx]                  
-  
-  if (logscale) {
-    densityplot(sub, scale = list(x = list(log = 10)))
-  } else {
-    densityplot(sub)
-  }
-}
+sum_stats_g <- summary(samples_gaussian)$statistics[, "Mean"]
 
-densityplot_nimble(samples, "theta_inf")
-densityplot_nimble(samples, "theta_0")
-densityplot_nimble(samples, "alpha_con")
-densityplot_nimble(samples, "beta_con")
+theta_0_est_g   <- sum_stats_g[grep("^theta_0\\[", names(sum_stats_g))]
+theta_inf_est_g <- sum_stats_g[grep("^theta_inf\\[", names(sum_stats_g))]
+alpha_con_est_g <- sum_stats_g[grep("^alpha_con\\[", names(sum_stats_g))]
+beta_con_est_g  <- sum_stats_g[grep("^beta_con\\[", names(sum_stats_g))]
 
-#### Recovery time estimation ####
+# raw data:
 
-# extracting posterior samples for metrics
+var_names_g <- colnames(dataSub)[-c(1:3)]
+
+plot_data_g <- rec_df %>%
+  mutate(VarName = factor(variable_rec, 
+                          levels = 1:constList$n_var, 
+                          labels = var_names))
 
 rec_conn <- dataSub$ConIndex[dataSub$type == "rec"]
 conn_values <- c(
@@ -337,49 +486,65 @@ conn_values <- c(
   High   = quantile(rec_conn, 0.75, na.rm = TRUE)
 )
 
-# currently using those below just to check, but, 
-# makes more sense to only take connectivity values
-# from recovering forest plots
-conn_values <- c(
-  Low      = summary(dataList$connectivity)[[2]],
-  Medium   = summary(dataList$connectivity)[[4]],
-  High     = summary(dataList$connectivity)[[5]]
-)
-
+#### Recovery time estimation ####
 
 w <- weights_df %>% pull(prctg) # check if order is the same as in the model_df data frame
 
-t_multi_conn_sd <- lapply(conn_values, function(cn) {
-  recovery_tmulti_nimble_w(samples, groups = 4:6, conn = cn, weights = w)
+# extracting posterior samples for metrics
+
+t_multi_conn_pol <- lapply(conn_values, function(cn) {
+  recovery_tmulti_nimble_w(samples, groups = 1:3, conn = cn, weights = w[1:3])
 })
+sum(is.na(t_multi_conn_pol))
+
+t_multi_conn_sd <- lapply(conn_values, function(cn) {
+  recovery_tmulti_nimble_w(samples, groups = 4:6, conn = cn, weights = w[4:6])
+})
+sum(is.na(t_multi_conn_sd))
 
 # per group:
 
-t_per_group_conn_sd <- lapply(conn_values, function(cn) {
-  recovery_tmulti_per_group_nimble(samples, groups = 4:6, conn = cn)
+t_per_group_conn_pol_g <- lapply(conn_values, function(cn) {
+  recovery_tmulti_per_group_nimble(samples_gaussian, groups = 1:6, conn = cn)
 })
+sum(is.na(t_per_group_conn_pol_g[[1]]))
+sum(is.na(t_per_group_conn_pol_g[[2]]))
+sum(is.na(t_per_group_conn_pol_g[[3]]))
+sum(is.na(t_per_group_conn_pol_g[[4]]))
+sum(is.na(t_per_group_conn_pol_g[[5]]))
+sum(is.na(t_per_group_conn_pol_g[[6]]))
 
 
-# extract variables for plotting
+t_per_group_conn_sd_g <- lapply(conn_values, function(cn) {
+  recovery_tmulti_per_group_nimble(samples_gaussian, groups = 7:12, conn = cn)
+})
+sum(is.na(t_per_group_conn_sd[[1]]))
+sum(is.na(t_per_group_conn_sd[[2]]))
+sum(is.na(t_per_group_conn_sd[[3]]))
 
-theta_inf <- as.matrix(samples_all[ , grepl("^theta_inf\\[", colnames(samples_all)), drop = FALSE])
-theta_0   <- as.matrix(samples_all[ , grepl("^theta_0\\[",   colnames(samples_all)), drop = FALSE])
-alpha_con <- as.matrix(samples_all[ , grepl("^alpha_con\\[", colnames(samples_all)), drop = FALSE])
-beta_con  <- as.matrix(samples_all[ , grepl("^beta_con\\[",  colnames(samples_all)), drop = FALSE])
-mean_theta_inf  <- samples_all[, "mean_theta_inf"]
-sigma_theta_inf <- samples_all[, "sigma_theta_inf"]
-mean_theta_0    <- samples_all[, "mean_theta_0"]
-sigma_theta_0   <- samples_all[, "sigma_theta_0"]
+### credible intervals:
 
-qt90_multi_conn <- lapply(t_multi_conn, function(x) {
+qt90_multi_conn_pol_g <- lapply(t_multi_conn_pol_g, function(x) {
   quantile(x, probs = c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
 })
-qt90_multi_conn
+qt90_multi_conn_pol
 
-qt90_per_group_conn <- lapply(t_per_group_conn, function(tmat) {
+qt90_per_group_conn_pol_g <- lapply(t_per_group_conn_pol_g, function(tmat) {
   apply(tmat, 2, quantile, probs = c(0.05, 0.25, 0.5, 0.75, 0.95),
         na.rm = TRUE)
 })
+qt90_per_group_conn_pol_g
+
+qt90_multi_conn_sd_g <- lapply(t_multi_conn_sd_g, function(x) {
+  quantile(x, probs = c(0.05, 0.25, 0.5, 0.75, 0.95), na.rm = TRUE)
+})
+qt90_multi_conn_sd_g
+
+qt90_per_group_conn_sd_g <- lapply(t_per_group_conn_sd_g, function(tmat) {
+  apply(tmat, 2, quantile, probs = c(0.05, 0.25, 0.5, 0.75, 0.95),
+        na.rm = TRUE)
+})
+qt90_per_group_conn_sd_g
 
 sigmaSq_rec <- do.call(rbind, as.mcmc.list(samp1$sigmaSq_rec))
 sigmaSq_old <- do.call(rbind, as.mcmc.list(samp1$sigmaSq_old))

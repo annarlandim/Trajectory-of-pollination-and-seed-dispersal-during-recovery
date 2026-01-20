@@ -122,7 +122,7 @@ int_bat_pol_hbt <- int_bat_pol %>%
 
 int_bees_plot <- int_bees %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
-  group_by(interaction, Treatment3) %>%
+  group_by(interaction, Plot_ID) %>%
   summarise(Treatment3 = first(Treatment3),
             Plot_ID = first(Plot_ID), RegTime = first(RegTime),
             interaction = first(interaction),
@@ -130,7 +130,7 @@ int_bees_plot <- int_bees %>%
 
 int_moths_plot <- int_moths %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
-  group_by(interaction, Treatment3) %>%
+  group_by(interaction, Plot_ID) %>%
   summarise(Treatment3 = first(Treatment3),
             Plot_ID = first(Plot_ID), RegTime = first(RegTime),
             interaction = first(interaction),
@@ -138,7 +138,7 @@ int_moths_plot <- int_moths %>%
 
 int_bat_pol_plot <- int_bat_pol %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
-  group_by(interaction, Treatment3) %>%
+  group_by(interaction, Plot_ID) %>%
   summarise(Treatment3 = first(Treatment3),
             Plot_ID = first(Plot_ID), RegTime = first(RegTime),
             interaction = first(interaction),
@@ -210,7 +210,7 @@ int_nf_hbt <- int_nf %>%
 
 int_bats_plot <- int_bats %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
-  group_by(interaction, Treatment3) %>%
+  group_by(interaction, Plot_ID) %>%
   filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
                                "Borojoa_sp.", "Persea_americana")) %>%
   summarise(Treatment3 = first(Treatment3),
@@ -220,7 +220,7 @@ int_bats_plot <- int_bats %>%
 
 int_birds_plot <- int_birds %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
-  group_by(interaction, Treatment3) %>%
+  group_by(interaction, Plot_ID) %>%
   filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
                                "Borojoa_sp.", "Persea_americana")) %>%
   summarise(Treatment3 = first(Treatment3),
@@ -230,7 +230,7 @@ int_birds_plot <- int_birds %>%
 
 int_nf_plot <- int_nf %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
-  group_by(interaction, Treatment3) %>%
+  group_by(interaction, Plot_ID) %>%
   filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
                                "Borojoa_sp.", "Persea_americana")) %>%
   summarise(Treatment3 = first(Treatment3),
@@ -262,7 +262,7 @@ seeds_hbt <- seeds %>%
          StdWidth, StdLength, StdWeight)
 
 seeds_plot <- seeds %>%
-  group_by(plant_species, Treatment3) %>%
+  group_by(plant_species, Plot_ID) %>%
   filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
                               "Borojoa_sp.", "Persea_americana")) %>%
   summarise(Treatment3 = first(Treatment3),
@@ -304,7 +304,7 @@ seedlings_hbt <- seedlings %>%
 
 seedlings_plot <- seedlings %>%
   # filter(Plot_ID %in% master$Plot_ID[master$PREX == "PREX"]) %>%
-  group_by(Species_name, Treatment3) %>%
+  group_by(Species_name, Plot_ID) %>%
   filter(!Species_name %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
                                "Borojoa_sp.", "Persea_americana")) %>%
   summarise(Treatment3 = first(Treatment3),
@@ -367,16 +367,16 @@ scores_sd$Treatment3 <-  factor(scores_sd$Treatment3,
 #### Seeds
 
 # Number of components to be used:
-cor <- cor.smooth(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")])
-eigen <- eigen(cor)
-permuted <- matrix(nrow=1000, ncol=3)
-for(i in 1:1000){
-  permuted_data <- apply(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")],2,sample)
-  permuted[i,] <- eigen(cor.smooth(permuted_data))$values
-}
-thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
-print(eigen$values)
-print(thresholds)
+# cor <- cor.smooth(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")])
+# eigen <- eigen(cor)
+# permuted <- matrix(nrow=1000, ncol=3)
+# for(i in 1:1000){
+#   permuted_data <- apply(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")],2,sample)
+#   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
+# }
+# thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
+# print(eigen$values)
+# print(thresholds)
 
 pca_seeds <- principal(seeds_hbt[, c("StdWidth", "StdLength", "StdWeight")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
 

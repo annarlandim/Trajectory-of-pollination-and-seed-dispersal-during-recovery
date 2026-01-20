@@ -316,8 +316,42 @@ ts_sd <- ggplot(scores_sd, aes(x = RC1, y = RC2, color=Treatment3)) +
        y = paste("Trait axis 2 (", round(pca_sd$Vaccounted[2,2]*100, 2), "%)", sep = ""))
 ts_sd
 
-## Seedlings
+## Seeds
 
+hull_seeds <- hulls_hbt(scores_seeds)
+
+ts_seeds <- ggplot(scores_seeds, aes(x = RC1, y = RC2, color=Treatment3)) +
+  geom_polygon(data = hull_seeds, aes(x = RC1, y = RC2, fill = Treatment3)) +
+  scale_fill_manual(values = c('regeneration early' = rgb(0.89,0.15,0.21,0.3),
+                               'regeneration late' =  rgb(1,0.75,0,0.3),
+                               'old-growth forest' = rgb(0,0.4,0,0.3)),
+                    labels = c("Old-growth forest", "Late regeneration", "Early regeneration")) +
+  geom_point(data = scores_seeds, aes(RC1, RC2)) +
+  scale_color_manual(values = c('regeneration early' = rgb(0.89,0.15,0.21,0.5),
+                                'regeneration late' =  rgb(1,0.75,0,0.5),
+                                'old-growth forest' = rgb(0,0.4,0,0.5)),
+                     labels = c("Old-growth forest", "Late regeneration", "Early regeneration")) +
+  geom_point(aes(mean(scores_seeds[Treatment3=="regeneration early", "RC1"]), mean(scores_seeds[Treatment3=="regeneration early", "RC2"])), size = 5, shape = 23, fill =rgb(0.89,0.15,0.21,0.5), color = rgb(0.89,0.15,0.21,0.5)) +
+  geom_point(aes(mean(scores_seeds[Treatment3=="regeneration late", "RC1"]), mean(scores_seeds[Treatment3=="regeneration late", "RC2"])), size = 5, shape = 23, fill = rgb(1, 0.75,0, 0.5), color = rgb(1, 0.75,0, 0.5)) +
+  geom_point(aes(mean(scores_seeds[Treatment3=="old-growth forest", "RC1"]), mean(scores_seeds[Treatment3=="old-growth forest", "RC2"])), size = 5, shape = 23, fill = rgb(0,0.4,0,0.5), color = rgb(0,0.4,0,0.5)) +
+  geom_segment(data = as.data.frame(pca_seeds$loadings[,1:2] * 3), aes(x = 0, y = 0, xend = RC1, yend = RC2),
+               arrow = arrow(), color = "black", linewidth = 1) +
+  geom_text(data = as.data.frame(pca_seeds$loadings[, 1:2] * 3), aes(label = c("StdWidth", "StdLength", "StdWeight"),
+                                                                     x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
+  coord_fixed(ratio = 1) +
+  theme_classic() +
+  theme(legend.text = element_text(size=16),
+        legend.position = "none",
+        axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20),
+        # axis.title = element_blank()
+  ) +
+  scale_x_continuous(limits = c(-2.5, 3), breaks = c(-2,0,2)) +
+  scale_y_continuous(limits = c(-2, 4), breaks = c(-2,0,2,4)) +
+  labs(x = paste("Trait axis 1 (", round(pca_seeds$Vaccounted[2,1]*100, 2), "%)", sep = ""),
+       y = paste("Trait axis 2 (", round(pca_seeds$Vaccounted[2,2]*100, 2), "%)", sep = ""))
+ts_seeds
+
+## Seedlings
 
 hull_sdlng <- hulls_hbt(scores_sdlng)
 
@@ -337,7 +371,7 @@ ts_sdlng <- ggplot(scores_sdlng, aes(x = RC1, y = RC2, color=Treatment3)) +
   geom_point(aes(mean(scores_sdlng[Treatment3=="old-growth forest", "RC1"]), mean(scores_sdlng[Treatment3=="old-growth forest", "RC2"])), size = 5, shape = 23, fill = rgb(0,0.4,0,0.5), color = rgb(0,0.4,0,0.5)) +
   geom_segment(data = as.data.frame(pca_sdlng$loadings[,1:2] * 3), aes(x = 0, y = 0, xend = RC1, yend = RC2),
                arrow = arrow(), color = "black", linewidth = 1) +
-  geom_text(data = as.data.frame(pca_sdlng$loadings[, 1:2] * 3), aes(label = c("ThoughY", "ThoughO", "ThickY", "ThickO", "SLAY", "SLAO", "LDMCY", "LDMCO"),
+  geom_text(data = as.data.frame(pca_sdlng$loadings[, 1:2] * 3), aes(label = c("Though", "Thick", "SLA", "LDMC"),
                                                                   x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
   coord_fixed(ratio = 1) +
   theme_classic() +

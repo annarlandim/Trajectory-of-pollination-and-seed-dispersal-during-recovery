@@ -68,6 +68,32 @@ int_bat <- int_bat %>%
 
 #### Plants ####
 
+## Seeds
+
+seed_rain <- read.csv(file = here("data/raw/SP4/seed_rain.csv"))
+colnames(seed_rain)[c(2,5)] <- c("Plot_ID", "Morphotypes")
+seed_rain[seed_rain$Morphotypes == "M21", "plant_species"] <- "Wettinia_quinaria"
+seed_rain[seed_rain$Morphotypes == "M44", "plant_species"] <- "Piper_grande"
+
+seed_rain <- seed_rain %>% 
+  # remove unwanted interactions (cultivated plants)
+  filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava", "Borojoa_sp.", "Persea_americana")) %>%
+  mutate(
+    plant_species = na_if(plant_species, ""), 
+    plant_species = ifelse(
+      is.na(plant_species), 
+      Morphotypes,  
+      plant_species  
+    ),
+    Genus = ifelse(
+      !is.na(plant_species),  
+      str_extract(plant_species, "^[^_]+"),  
+      Morphotypes)) %>%
+  filter(DispersalSyndrome == "zoochory") %>%
+  left_join(select(master, Plot_ID, RegTime, Treatment2), by = "Plot_ID") %>%
+  select(Plot_ID, plant_species, RegTime, Treatment2)
+
+
 ## Seedlings
 
 seedlings <- read.csv(file = "data/raw/tree_seedling_ind_FT.csv")
@@ -344,6 +370,14 @@ int_bat <- int_bat %>%
     TRUE ~ as.character(Treatment2) 
   )))
 
+seed_rain <- seed_rain %>%
+  mutate(Treatment3 = as.factor(case_when(
+    Treatment2 %in% c("active cacao", "active pasture") ~ "regeneration early",
+    Treatment2 %in% c("cacao regeneration early", "pasture regeneration early") ~ "regeneration early",
+    Treatment2 %in% c("cacao regeneration late", "pasture regeneration late") ~ "regeneration late",
+    TRUE ~ as.character(Treatment2) 
+  )))
+
 seedlings <- seedlings %>%
   mutate(Treatment3 = as.factor(case_when(
     Treatment2 %in% c("active cacao", "active pasture") ~ "regeneration early",
@@ -571,6 +605,58 @@ traits_nf <- traits_nf %>%
 
 # Plant traits
 
+### Seeds
+
+traits_seeds <- read.csv("data/raw/SP4/seeds_traits.csv")
+# already clean
+
+tree_height <- read.csv("data/raw/tree_data_measures.csv")
+head(tree_height)
+
+mean_tree_height <- trees %>%
+  mutate(Number = as.numeric(Number)) %>%
+  left_join(y = tree_height, by = c("Plot", "Number"), relationship = "many-to-many") %>%
+  group_by(Species) %>%
+  summarise(mean_height = mean(Height, na.rm = T)) %>%
+  ungroup() %>%
+  rename(value_numeric = mean_height) %>%
+  mutate(trait = "height")
+# warning is because of traits like ripeness, which are not numeric
+
+traits_seeds <- traits_seeds %>%
+  left_join(mean_tree_height %>% select(Species, value_numeric), 
+            by = c("plant_species" = "Species")) %>%
+  mutate(Height = coalesce(Height, value_numeric)) %>%
+  select(-value_numeric)
+
+colnames(traits_seeds)
+
+perc_NA_seeds <- traits_seeds %>%
+  summarise(
+    na_SeedWidth = sum(is.na(SeedWidth)), # 0
+    na_SeedLength = sum(is.na(SeedLength)), # 0
+    na_SeedWeight = sum(is.na(SeedWeight)), # 0
+    na_Height = sum(is.na(Height)), # 22.39
+    na_WoodDensity = sum(is.na(WoodDensity)), # 50.75
+    n_row = n()) %>%
+  mutate(
+    p_SeedWidth = (na_SeedWidth/n_row) *100,
+    p_SeedLength = (na_SeedLength/n_row) *100,
+    p_SeedWeight = (na_SeedWeight/n_row) *100,
+    p_Height = (na_Height/n_row) *100,
+    p_WoodDensity = (na_WoodDensity/n_row) *100
+  )
+
+traits_seeds <- traits_seeds %>%
+  mutate(Genus = word(plant_species, 1, sep = "_")) %>%
+  group_by(Genus) %>%
+  mutate(SeedWidth = replace_na(data = SeedWidth, replace = mean(SeedWidth, na.rm = T)),
+         SeedLength = replace_na(data = SeedLength, replace = mean(SeedLength, na.rm = T)),
+         SeedWeight = replace_na(data = SeedWeight, replace = mean(SeedWeight, na.rm = T)),
+         Height = replace_na(data = Height, replace = mean(Height, na.rm = T)),
+         WoodDensity = replace_na(data = WoodDensity, replace = mean(WoodDensity, na.rm = T))) %>%
+  ungroup()
+
 ### Seedlings
 
 traits_seedlings <- read.csv("data/raw/FT_forest.csv")
@@ -656,17 +742,7 @@ mutate(Genus = word(Species_name, 1, sep = "_")) %>%
 
 ### Adults
 
-tree_height <- read.csv("data/raw/tree_data_measures.csv")
-
-mean_tree_height <- trees %>%
-  mutate(Number = as.numeric(Number)) %>%
-  left_join(y = tree_height, by = c("Plot", "Number"), relationship = "many-to-many") %>%
-  group_by(Species) %>%
-  summarise(mean_height = mean(Height, na.rm = T)) %>%
-  ungroup() %>%
-  rename(value_numeric = mean_height) %>%
-  mutate(trait = "height")
-# warning is because of traits like ripeness, which are not numeric
+head(mean_tree_height)
 
 Plants <- Plants %>%
   select(species, trait, value_numeric) 
@@ -813,7 +889,8 @@ all_traits_plants$CorLength <- all_traits_plants$CorLength + 1e-6  # to avoid 0s
 # write.csv(int_bat, file = here::here("data", "processed", "int_bats.csv"), row.names = F)
 # write.csv(int_nf, file = here::here("data", "processed", "int_nf.csv"), row.names = F)
 
-# write.csv(seedlings, file =here::here("data", "processed", "seedlings_ind.csv"), row.names = F)
+# write.csv(seed_rain, file = here::here("data", "processed", "seeds.csv"), row.names = F)
+# write.csv(seedlings, file = here::here("data", "processed", "seedlings_ind.csv"), row.names = F)
 
 # write.csv(traits_bee, file = here::here("data", "processed", "traits_bees.csv"), row.names = F)
 # write.csv(traits_moth, file = here::here("data", "processed", "traits_moth.csv"), row.names = F)
@@ -822,6 +899,7 @@ all_traits_plants$CorLength <- all_traits_plants$CorLength + 1e-6  # to avoid 0s
 # write.csv(traits_nf, file = here::here("data", "processed", "traits_nf.csv"), row.names = F)
 # write.csv(all_traits_plants, file = here::here("data", "processed", "traits_plants.csv"), row.names = F)
 # write.csv(traits_seedlings, file = here::here("data", "processed", "traits_seedlings.csv"), row.names = F)
+# write.csv(traits_seeds, file = here::here("data", "processed", "traits_seeds.csv"), row.names = F)
 
 #### Vegetation structure ####
 

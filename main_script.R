@@ -22,7 +22,10 @@ pkgs <- c(
   "coda",
   "lattice",
   "MCMCvis",
-  "vegan"
+  "vegan", 
+  "parallel", 
+  "bootnet",
+  "boot"
 )
 
 missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]

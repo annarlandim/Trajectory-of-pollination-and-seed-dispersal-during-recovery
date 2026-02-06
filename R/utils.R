@@ -164,37 +164,37 @@ recovery_tmulti_nimble_w <- function(samples, groups, conn, weights, maxt = 1000
 
 ## without connectivity:
 
-recovery_tmulti_nimble_w <- function(samples, groups, weights, maxt = 1000) {
-  all_draws <- do.call(rbind, samples)
-  
-  theta0_cols   <- paste0("theta_0[",   groups, "]")
-  thetainf_cols <- paste0("theta_inf[", groups, "]")
-  lambda_cols   <- paste0("lambda[", groups, "]")
-  
-  theta_0   <- as.matrix(all_draws[, theta0_cols,   drop = FALSE])
-  theta_inf <- as.matrix(all_draws[, thetainf_cols, drop = FALSE])
-  lMat      <- as.matrix(all_draws[, lambda_cols,    drop = FALSE])
-  
-  w <- as.numeric(weights)
-  w <- w / sum(w)
-  
-  tgrid  <- seq(0, maxt, 0.1)
-  lambda <- lMat
-  
-  t_multi <- rep(NA_real_, nrow(theta_0))
-  
-  for (tt in tgrid) {
-    At <- theta_0 + (theta_inf - theta_0) * (1 - exp(-lambda * tt))
-    dev_rel <- abs(At - theta_inf) / theta_inf
-    Mt <- as.numeric(dev_rel %*% w)
-    
-    hit <- is.na(t_multi) & (Mt <= 0.10)
-    if (any(hit)) t_multi[hit] <- tt
-    if (all(!is.na(t_multi))) break
-  }
-  
-  t_multi
-}
+# recovery_tmulti_nimble_w <- function(samples, groups, weights, maxt = 1000) {
+#   all_draws <- do.call(rbind, samples)
+#   
+#   theta0_cols   <- paste0("theta_0[",   groups, "]")
+#   thetainf_cols <- paste0("theta_inf[", groups, "]")
+#   lambda_cols   <- paste0("lambda[", groups, "]")
+#   
+#   theta_0   <- as.matrix(all_draws[, theta0_cols,   drop = FALSE])
+#   theta_inf <- as.matrix(all_draws[, thetainf_cols, drop = FALSE])
+#   lMat      <- as.matrix(all_draws[, lambda_cols,    drop = FALSE])
+#   
+#   w <- as.numeric(weights)
+#   w <- w / sum(w)
+#   
+#   tgrid  <- seq(0, maxt, 0.1)
+#   lambda <- lMat
+#   
+#   t_multi <- rep(NA_real_, nrow(theta_0))
+#   
+#   for (tt in tgrid) {
+#     At <- theta_0 + (theta_inf - theta_0) * (1 - exp(-lambda * tt))
+#     dev_rel <- abs(At - theta_inf) / theta_inf
+#     Mt <- as.numeric(dev_rel %*% w)
+#     
+#     hit <- is.na(t_multi) & (Mt <= 0.10)
+#     if (any(hit)) t_multi[hit] <- tt
+#     if (all(!is.na(t_multi))) break
+#   }
+#   
+#   t_multi
+# }
 
 ### per group:
 
@@ -245,47 +245,47 @@ recovery_tmulti_per_group_nimble <- function(samples, groups, conn,
 
 ## without con
 
-recovery_tmulti_per_group_nimble <- function(samples, groups, 
-                                             maxt = 1000) {
-  
-  # junta as chains
-  all <- do.call(rbind, samples)
-  
-  # extrai draws [draw x group]
-  theta_0   <- as.matrix(all[, paste0("theta_0[",   groups, "]"), drop = FALSE])
-  theta_inf <- as.matrix(all[, paste0("theta_inf[", groups, "]"), drop = FALSE])
-  lMat      <- as.matrix(all[, paste0("lambda[", groups, "]"), drop = FALSE])
-  
-  n_draw  <- nrow(theta_0)
-  n_group <- ncol(theta_0)
-  
-  lambda <- lMat
-  tgrid  <- seq(0, maxt, 0.1)
-  
-  # t_multi por draw por grupo
-  tmat <- matrix(NA_real_, nrow = n_draw, ncol = n_group)
-  colnames(tmat) <- paste0("g", groups)
-  
-  for (g in seq_len(n_group)) {
-    T0   <- theta_0[, g]
-    Tinf <- theta_inf[, g]
-    lam  <- lambda[, g]
-    
-    done <- rep(FALSE, n_draw)
-    
-    for (tt in tgrid) {
-      At  <- T0 + (Tinf - T0) * (1 - exp(-lam * tt))
-      rel <- abs(At - Tinf) / Tinf
-      
-      hit <- (!done) & (rel <= 0.10)
-      if (any(hit)) {
-        tmat[hit, g] <- tt
-        done[hit] <- TRUE
-      }
-      if (all(done)) break
-    }
-  }
-  
-  tmat
-}
+# recovery_tmulti_per_group_nimble <- function(samples, groups, 
+#                                              maxt = 1000) {
+#   
+#   # junta as chains
+#   all <- do.call(rbind, samples)
+#   
+#   # extrai draws [draw x group]
+#   theta_0   <- as.matrix(all[, paste0("theta_0[",   groups, "]"), drop = FALSE])
+#   theta_inf <- as.matrix(all[, paste0("theta_inf[", groups, "]"), drop = FALSE])
+#   lMat      <- as.matrix(all[, paste0("lambda[", groups, "]"), drop = FALSE])
+#   
+#   n_draw  <- nrow(theta_0)
+#   n_group <- ncol(theta_0)
+#   
+#   lambda <- lMat
+#   tgrid  <- seq(0, maxt, 0.1)
+#   
+#   # t_multi por draw por grupo
+#   tmat <- matrix(NA_real_, nrow = n_draw, ncol = n_group)
+#   colnames(tmat) <- paste0("g", groups)
+#   
+#   for (g in seq_len(n_group)) {
+#     T0   <- theta_0[, g]
+#     Tinf <- theta_inf[, g]
+#     lam  <- lambda[, g]
+#     
+#     done <- rep(FALSE, n_draw)
+#     
+#     for (tt in tgrid) {
+#       At  <- T0 + (Tinf - T0) * (1 - exp(-lam * tt))
+#       rel <- abs(At - Tinf) / Tinf
+#       
+#       hit <- (!done) & (rel <= 0.10)
+#       if (any(hit)) {
+#         tmat[hit, g] <- tt
+#         done[hit] <- TRUE
+#       }
+#       if (all(done)) break
+#     }
+#   }
+#   
+#   tmat
+# }
 

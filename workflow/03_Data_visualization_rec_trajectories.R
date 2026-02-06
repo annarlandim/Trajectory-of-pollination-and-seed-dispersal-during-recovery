@@ -1,6 +1,8 @@
 
 # --- 1. PREPARE RAW DATA ---
 # Extract Old Growth data for plotting
+
+var_names <- colnames(dataSub)[-c(1:3)]
 raw_og_data <- long %>%
   filter(type == "old") %>%
   mutate(VarName = factor(variable, levels = 1:13, labels = var_names))

@@ -25,7 +25,8 @@ pkgs <- c(
   "vegan", 
   "parallel", 
   "bootnet",
-  "boot"
+  "boot",
+  "qgraph"
 )
 
 missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]

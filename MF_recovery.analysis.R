@@ -509,7 +509,16 @@ jagsModel <-
       sigmaSq_old[j] <- pow(tau_old[j], -1)
       tau_rec[j] ~ dscaled.gamma(s_rec[j], 2)
       sigmaSq_rec[j] <- pow(tau_rec[j], -1)
-      # prior on asymptotic attribute value"
+      # prior on asymptotic attribute value
+           # prior on initial attribute value
+      theta_0[j] ~ dlnorm(0, 1)
+      # prior on intercept and slope for lambda
+      alpha[j] ~ dnorm(0,1)
+      beta[j] ~ dnorm(0,1)
+
+    }
+  }"
+cat(jagsModel, file = "jagsModel.txt")
 
 ## algum erro de copia e cola nessa parte.....
       library(psych)
@@ -1218,17 +1227,7 @@ diff_tests <- list(qt90_conn, perc_pxa, perc_pxi, perc_axi, pvalue_beta)
 # saveRDS(model_samples, "model_samples.RData")
 # saveRDS(diff_tests, "groups_diffs.RData")
 
-      # prior on initial attribute value
-      theta_0[j] ~ dlnorm(0, 1)
-      # prior on intercept and slope for lambda
-      alpha[j] ~ dnorm(0,1)
-      beta[j] ~ dnorm(0,1)
-
-    }
-  }"
-cat(jagsModel, file = "jagsModel.txt")
-
-
+ 
 # function to calculate recovery time based on Poorter et al. (2021)
 # T90 was calculated by calculating for each moment in time the absolute
 # attribute value using the site-specific model equations

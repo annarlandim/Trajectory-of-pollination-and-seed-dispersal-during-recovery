@@ -509,7 +509,9 @@ jagsModel <-
       sigmaSq_old[j] <- pow(tau_old[j], -1)
       tau_rec[j] ~ dscaled.gamma(s_rec[j], 2)
       sigmaSq_rec[j] <- pow(tau_rec[j], -1)
-      # prior on asymptotic attribute value
+      # prior on asymptotic attribute value"
+
+## algum erro de copia e cola nessa parte.....
       library(psych)
 library(dplyr)
 library(tidyr)

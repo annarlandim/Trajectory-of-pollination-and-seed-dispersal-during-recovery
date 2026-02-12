@@ -26,7 +26,8 @@ pkgs <- c(
   "parallel", 
   "bootnet",
   "boot",
-  "qgraph"
+  "qgraph",
+  "brms"
 )
 
 missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]

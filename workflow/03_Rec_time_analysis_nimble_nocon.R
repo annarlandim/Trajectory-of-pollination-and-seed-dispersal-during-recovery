@@ -388,27 +388,27 @@ w <- weights_df %>% pull(prctg) # check if order is the same as in the model_df 
 
 ### extracting posterior samples for metrics
 
-t_multi_pol <- recovery_tmulti_nimble_w(samples, groups = 1:3, weights = w[1:3])
+t_multi_pol <- recovery_tmulti_nimble_w_nocon(samples, groups = 1:3, weights = w[1:3])
 sum(is.na(t_multi_pol))
 
-t_multi_sd <- recovery_tmulti_nimble_w(samples, groups = 4:6, weights = w[4:6])
+t_multi_sd <- recovery_tmulti_nimble_w_nocon(samples, groups = 4:6, weights = w[4:6])
 sum(is.na(t_multi_sd))
 
 # per group:
 
-t_per_group_pol <- recovery_tmulti_per_group_nimble(samples, groups = 1:3)
+t_per_group_pol <- recovery_tmulti_per_group_nimble_nocon(samples, groups = 1:3)
 sum(is.na(t_per_group_pol[[1]]))
 sum(is.na(t_per_group_pol[[2]]))
 sum(is.na(t_per_group_pol[[3]]))
 
-t_per_group_sd <- recovery_tmulti_per_group_nimble(samples, groups = 4:6)
+t_per_group_sd <- recovery_tmulti_per_group_nimble_nocon(samples, groups = 4:6)
 sum(is.na(t_per_group_sd[[1]]))
 sum(is.na(t_per_group_sd[[2]]))
 sum(is.na(t_per_group_sd[[3]]))
 
 # seeds:
 
-t_seeds <- recovery_tmulti_per_group_nimble(samples, groups = 7:10)
+t_seeds <- recovery_tmulti_per_group_nimble_nocon(samples, groups = 7:10)
 sum(is.na(t_seeds[[1]]))
 sum(is.na(t_seeds[[2]]))
 sum(is.na(t_seeds[[3]]))
@@ -416,7 +416,7 @@ sum(is.na(t_seeds[[4]]))
 
 # seedlings:
 
-t_seedlings <- recovery_tmulti_per_group_nimble(samples, groups = 11:14)
+t_seedlings <- recovery_tmulti_per_group_nimble_nocon(samples, groups = 11:14)
 sum(is.na(t_seedlings[[1]]))
 sum(is.na(t_seedlings[[2]]))
 sum(is.na(t_seedlings[[3]]))
@@ -470,9 +470,9 @@ rec_results <- list(
     seedlings = qt90_seedlings
   )
 )
-# saveRDS(rec_results, "output/t90.rds")
-# saveRDS(samples, "output/model_posteriors.rds")
-# metadata <- list(var_names = colnames(dataSub)[-c(1,2)],
-#                  group_index = group_index_vec)
-# saveRDS(metadata, "output/model_metadata.rds")
+saveRDS(rec_results, "output/t90_nocon.rds")
+saveRDS(samples, "output/model_posteriors_nocon.rds")
+metadata <- list(var_names = colnames(dataSub)[-c(1,2)],
+                 group_index = group_index_vec)
+saveRDS(metadata, "output/model_metadata_nocon.rds")
 

@@ -29,6 +29,8 @@ traits_birds <- read.csv(file = "data/processed/traits_birds.csv")
 traits_nf <- read.csv(file = "data/processed/traits_nf.csv")
 
 traits_plants <- read.csv(file = "data/processed/traits_plants.csv")
+# for some reason Eschweilera_rimbachii is duplicated, so:
+traits_plants <- traits_plants %>% distinct(plant_species, .keep_all = TRUE)
 traits_seeds <- read.csv(file = "data/processed/traits_seeds.csv")
 traits_seedlings <- read.csv(file = "data/processed/traits_seedlings.csv")
 
@@ -144,7 +146,14 @@ int_bat_pol_plot <- int_bat_pol %>%
             interaction = first(interaction),
             .groups = "drop") 
 
-int_pol_hbt <- bind_rows(int_bees_hbt, int_moths_hbt, int_bat_pol_hbt)
+int_pol_hbt <- bind_rows(int_bees_hbt, int_moths_hbt, int_bat_pol_hbt) %>%
+  mutate(    
+    StdPL = as.numeric(scale(StdPL)),
+    StdWL = as.numeric(scale(StdWL)),
+    StdH = as.numeric(scale(StdH)),
+    StdCR = as.numeric(scale(StdCR))) %>%
+  select(Treatment3, interaction, LogPL, LogWL, LogH, LogCR, StdPL, StdWL, StdH, StdCR, group)
+
 
 #### Seed-dispersal 
 
@@ -238,9 +247,18 @@ int_nf_plot <- int_nf %>%
             interaction = first(interaction),
             .groups = "drop") 
 
-int_sd_hbt <- bind_rows(int_bats_hbt, int_birds_hbt, int_nf_hbt)
+int_sd_hbt <- bind_rows(int_bats_hbt, int_birds_hbt, int_nf_hbt) %>%
+  mutate(    
+    StdBM = as.numeric(scale(StdBM)),
+    StdCM = as.numeric(scale(StdCM)),
+    StdGW = as.numeric(scale(StdGW)),
+    StdFW = as.numeric(scale(StdFW)),
+    StdHWI = as.numeric(scale(StdHWI)),
+    StdH = as.numeric(scale(StdH))) %>%
+  select(Treatment3, interaction, LogBM, LogCM, LogGW, LogFW, HWIndex, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
 
-#### Seeds and seedlings
+
+#### Seeds and seedlings ####
 
 ### Seeds
 
@@ -316,7 +334,7 @@ seedlings_plot <- seedlings %>%
 
 #### Pollination
 
-# # Number of components to be used:
+# Number of components to be used:
 # cor <- cor.smooth(int_pol_hbt[, c("LogPL", "LogWL", "LogH", "LogCR")])
 # eigen <- eigen(cor)
 # permuted <- matrix(nrow=1000, ncol=4)
@@ -337,21 +355,21 @@ scores_pol$group <- int_pol_hbt$group
 scores_pol <- scores_pol %>% dplyr::select(group, interaction, Treatment3, RC1, RC2)
 
 scores_pol$Treatment3 <-  factor(scores_pol$Treatment3,
-                                levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
+                                 levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
 
 #### Seed-dispersal
 
-# # Number of components to be used:
-# cor <- cor.smooth(int_sd_hbt[, c("LogBM", "LogCM","LogGW", "LogFW", "HWIndex", "LogH")])
-# eigen <- eigen(cor)
-# permuted <- matrix(nrow=1000, ncol=6)
-# for(i in 1:1000){
-#   permuted_data <- apply(int_sd_hbt[, c("LogBM", "LogCM", "LogGW", "LogFW", "HWIndex", "LogH")],2,sample)
-#   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
-# }
-# thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
-# print(eigen$values)
-# print(thresholds)
+# Number of components to be used:
+cor <- cor.smooth(int_sd_hbt[, c("LogBM", "LogCM","LogGW", "LogFW", "HWIndex", "LogH")])
+eigen <- eigen(cor)
+permuted <- matrix(nrow=1000, ncol=6)
+for(i in 1:1000){
+  permuted_data <- apply(int_sd_hbt[, c("LogBM", "LogCM", "LogGW", "LogFW", "HWIndex", "LogH")],2,sample)
+  permuted[i,] <- eigen(cor.smooth(permuted_data))$values
+}
+thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
+print(eigen$values)
+print(thresholds)
 
 pca_sd <- principal(int_sd_hbt[, c("StdBM", "StdCM", "StdGW", "StdFW", "StdHWI", "StdH")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
 
@@ -362,7 +380,7 @@ scores_sd$group <- int_sd_hbt$group
 scores_sd <- scores_sd %>% dplyr::select(group, interaction, Treatment3, RC1, RC2)
 
 scores_sd$Treatment3 <-  factor(scores_sd$Treatment3,
-                                  levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
+                                levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
 
 # pca_processes <- list(pca_pol, pca_sd)
 # scores_processes <- list(scores_pol, scores_sd)
@@ -372,16 +390,16 @@ scores_sd$Treatment3 <-  factor(scores_sd$Treatment3,
 #### Seeds
 
 # Number of components to be used:
-cor <- cor.smooth(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")])
-eigen <- eigen(cor)
-permuted <- matrix(nrow=1000, ncol=3)
-for(i in 1:1000){
-  permuted_data <- apply(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")],2,sample)
-  permuted[i,] <- eigen(cor.smooth(permuted_data))$values
-}
-thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
-print(eigen$values)
-print(thresholds)
+# cor <- cor.smooth(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")])
+# eigen <- eigen(cor)
+# permuted <- matrix(nrow=1000, ncol=3)
+# for(i in 1:1000){
+#   permuted_data <- apply(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")],2,sample)
+#   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
+# }
+# thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
+# print(eigen$values)
+# print(thresholds)
 
 pca_seeds <- principal(seeds_hbt[, c("StdWidth", "StdLength", "StdWeight")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
 
@@ -667,4 +685,8 @@ model_df <- expl %>% select(Treatment3, Plot_ID, RegTime) %>%
 
 str(model_df)
 
-# write.csv(model_df, file = here::here("data", "processed", "model_df.csv"), row.names = F)
+
+# saveRDS(list(scores_pol, scores_sd), file = here::here("output", "scores_processes.3.RDS"))
+# saveRDS(list(pca_pol, pca_sd), file = here::here("output", "pca_processes.3.RDS"))
+
+# write.csv(model_df, file = here::here("data", "processed", "model_df.3.csv"), row.names = F)

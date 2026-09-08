@@ -29,6 +29,8 @@ traits_birds <- read.csv(file = "data/processed/traits_birds.csv")
 traits_nf <- read.csv(file = "data/processed/traits_nf.csv")
 
 traits_plants <- read.csv(file = "data/processed/traits_plants.csv")
+# for some reason Eschweilera_rimbachii is duplicated, so:
+traits_plants <- traits_plants %>% distinct(plant_species, .keep_all = TRUE)
 traits_seeds <- read.csv(file = "data/processed/traits_seeds.csv")
 traits_seedlings <- read.csv(file = "data/processed/traits_seedlings.csv")
 
@@ -72,10 +74,10 @@ weights_df <- bind_rows(weights_df_pol, weights_df_sd)
 
 #### Pollination 
 
-int_bees_hbt <- int_bees %>%
+int_bees_unique <- int_bees %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
-  group_by(interaction, Treatment3) %>%
-  summarise(Treatment3 = first(Treatment3), animal_species = first(animal_species),
+  group_by(interaction) %>%
+  summarise(animal_species = first(animal_species),
             plant_species = first(plant_species), interaction = first(interaction), 
             .groups = 'drop') %>%
   left_join(traits_bees, by = "animal_species", relationship = "many-to-many") %>%
@@ -86,14 +88,14 @@ int_bees_hbt <- int_bees %>%
     StdWL = as.numeric(scale(LogWL)),
     StdH = as.numeric(scale(LogH)),
     StdCR = as.numeric(scale(LogCR))) %>%
-  select(Treatment3, interaction, LogPL, LogWL, LogH, LogCR, StdPL, StdWL, StdH, StdCR, group)
+  select(interaction, LogPL, LogWL, LogH, LogCR, StdPL, StdWL, StdH, StdCR, group)
 
-int_moths_hbt <- int_moths %>%
+int_moths_unique <- int_moths %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
-  group_by(interaction, Treatment3) %>%
-  summarise(Treatment3 = first(Treatment3), animal_species = first(animal_species),
+  group_by(interaction) %>%
+  summarise(animal_species = first(animal_species),
             plant_species = first(plant_species), interaction = first(interaction), 
-            .groups = 'drop') %>%
+            .groups = 'drop')%>%
   left_join(traits_moths, by = "animal_species", relationship = "many-to-many") %>%
   left_join(traits_plants, by = "plant_species", relationship = "many-to-many") %>%
   mutate(LogPL = log(prLength), LogWL = log(wingLength), LogH = log(Height), LogCR = log(CorLength), group = "Moths") %>%
@@ -102,12 +104,12 @@ int_moths_hbt <- int_moths %>%
     StdWL = as.numeric(scale(LogWL)),
     StdH = as.numeric(scale(LogH)),
     StdCR = as.numeric(scale(LogCR))) %>%
-  select(Treatment3, interaction, LogPL, LogWL, LogH, LogCR, StdPL, StdWL, StdH, StdCR, group)
+  select(interaction, LogPL, LogWL, LogH, LogCR, StdPL, StdWL, StdH, StdCR, group)
 
-int_bat_pol_hbt <- int_bat_pol %>%
+int_bat_pol_unique <- int_bat_pol %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
-  group_by(interaction, Treatment3) %>%
-  summarise(Treatment3 = first(Treatment3), animal_species = first(animal_species),
+  group_by(interaction) %>%
+  summarise(animal_species = first(animal_species),
             plant_species = first(plant_species), interaction = first(interaction), 
             .groups = 'drop') %>%
   left_join(traits_bats, by = "animal_species", relationship = "many-to-many") %>%
@@ -118,7 +120,31 @@ int_bat_pol_hbt <- int_bat_pol %>%
     StdWL = as.numeric(scale(HWIndex)),
     StdH = as.numeric(scale(LogH)),
     StdCR = as.numeric(scale(LogCR))) %>%
-  select(Treatment3, interaction, LogPL, LogWL = HWIndex, LogH, LogCR, StdPL, StdWL, StdH, StdCR, group)
+  select(interaction, LogPL, LogWL = HWIndex, LogH, LogCR, StdPL, StdWL, StdH, StdCR, group)
+
+int_bees_hbt <- int_bees %>%
+  mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
+  group_by(interaction, Treatment3) %>%
+  summarise(Treatment3 = first(Treatment3), animal_species = first(animal_species),
+            plant_species = first(plant_species), interaction = first(interaction), 
+            group = "Bees",
+            .groups = 'drop')
+
+int_moths_hbt <- int_moths %>%
+  mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
+  group_by(interaction, Treatment3) %>%
+  summarise(Treatment3 = first(Treatment3), animal_species = first(animal_species),
+            plant_species = first(plant_species), interaction = first(interaction), 
+            group = "Moths",
+            .groups = 'drop')
+
+int_bat_pol_hbt <- int_bat_pol %>%
+  mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
+  group_by(interaction, Treatment3) %>%
+  summarise(Treatment3 = first(Treatment3), animal_species = first(animal_species),
+            plant_species = first(plant_species), interaction = first(interaction), 
+            group = "Bat_pol",
+            .groups = 'drop') 
 
 int_bees_plot <- int_bees %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
@@ -144,16 +170,25 @@ int_bat_pol_plot <- int_bat_pol %>%
             interaction = first(interaction),
             .groups = "drop") 
 
+int_pol_unique <- bind_rows(int_bees_unique, int_moths_unique, int_bat_pol_unique) %>%
+  mutate(    
+    StdPL = as.numeric(scale(StdPL)),
+    StdWL = as.numeric(scale(StdWL)),
+    StdH = as.numeric(scale(StdH)),
+    StdCR = as.numeric(scale(StdCR))) %>%
+  select(interaction, LogPL, LogWL, LogH, LogCR, StdPL, StdWL, StdH, StdCR, group)
+
+
 int_pol_hbt <- bind_rows(int_bees_hbt, int_moths_hbt, int_bat_pol_hbt)
 
 #### Seed-dispersal 
 
-int_bats_hbt <- int_bats %>%
+int_bats_unique <- int_bats %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
-  group_by(interaction, Treatment3) %>%
+  group_by(interaction) %>%
   filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
                                "Borojoa_sp.", "Persea_americana")) %>%
-  summarise(Treatment3 = first(Treatment3), animal_species = first(animal_species),
+  summarise(animal_species = first(animal_species),
             plant_species = first(plant_species), interaction = first(interaction), 
             .groups = 'drop') %>%
   left_join(traits_bats, by = "animal_species", relationship = "many-to-many") %>%
@@ -166,14 +201,14 @@ int_bats_hbt <- int_bats %>%
     StdFW = as.numeric(scale(LogFW)),
     StdHWI = as.numeric(scale(HWIndex)),
     StdH = as.numeric(scale(LogH))) %>%
-  select(Treatment3, interaction, LogBM, LogCM, LogGW, LogFW, HWIndex, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
+  select(interaction, LogBM, LogCM, LogGW, LogFW, HWIndex, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
 
-int_birds_hbt <- int_birds %>%
+int_birds_unique <- int_birds %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
-  group_by(interaction, Treatment3) %>%
+  group_by(interaction) %>%
   filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
                                "Borojoa_sp.", "Persea_americana")) %>%
-  summarise(Treatment3 = first(Treatment3), animal_species = first(animal_species),
+  summarise(animal_species = first(animal_species),
             plant_species = first(plant_species), interaction = first(interaction), 
             .groups = 'drop') %>%
   left_join(traits_birds, by = "animal_species", relationship = "many-to-many") %>%
@@ -186,14 +221,14 @@ int_birds_hbt <- int_birds %>%
     StdFW = as.numeric(scale(LogFW)),
     StdHWI = as.numeric(scale(HWIndex)),
     StdH = as.numeric(scale(LogH))) %>%
-  select(Treatment3, interaction, LogBM, LogCM, LogGW, LogFW, HWIndex, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
+  select(interaction, LogBM, LogCM, LogGW, LogFW, HWIndex, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
 
-int_nf_hbt <- int_nf %>%
+int_nf_unique <- int_nf %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
-  group_by(interaction, Treatment3) %>%
+  group_by(interaction) %>%
   filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
                                "Borojoa_sp.", "Persea_americana")) %>%
-  summarise(Treatment3 = first(Treatment3), animal_species = first(animal_species),
+  summarise(animal_species = first(animal_species),
             plant_species = first(plant_species), interaction = first(interaction), 
             .groups = 'drop') %>%
   left_join(traits_nf, by = "animal_species", relationship = "many-to-many") %>%
@@ -206,7 +241,37 @@ int_nf_hbt <- int_nf %>%
     StdFW = as.numeric(scale(LogFW)),
     StdHWI = NA,
     StdH = as.numeric(scale(LogH))) %>%
-  select(Treatment3, interaction, LogBM, LogCM, LogGW, LogFW, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
+  select(interaction, LogBM, LogCM, LogGW, LogFW, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
+
+int_bats_hbt <- int_bats %>%
+  mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
+  group_by(interaction, Treatment3) %>%
+  filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
+                               "Borojoa_sp.", "Persea_americana")) %>%
+  summarise(Treatment3 = first(Treatment3), animal_species = first(animal_species),
+            plant_species = first(plant_species), interaction = first(interaction), 
+            group = "Bats",
+            .groups = 'drop') 
+
+int_birds_hbt <- int_birds %>%
+  mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
+  group_by(interaction, Treatment3) %>%
+  filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
+                               "Borojoa_sp.", "Persea_americana")) %>%
+  summarise(Treatment3 = first(Treatment3), animal_species = first(animal_species),
+            plant_species = first(plant_species), interaction = first(interaction), 
+            group = "Birds",
+            .groups = 'drop') 
+
+int_nf_hbt <- int_nf %>%
+  mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
+  group_by(interaction, Treatment3) %>%
+  filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
+                               "Borojoa_sp.", "Persea_americana")) %>%
+  summarise(Treatment3 = first(Treatment3), animal_species = first(animal_species),
+            plant_species = first(plant_species), interaction = first(interaction), 
+            group = "NF",
+            .groups = 'drop') 
 
 int_bats_plot <- int_bats %>%
   mutate(interaction = paste(plant_species, animal_species, sep = ".")) %>%
@@ -238,9 +303,20 @@ int_nf_plot <- int_nf %>%
             interaction = first(interaction),
             .groups = "drop") 
 
+int_sd_unique <- bind_rows(int_bats_unique, int_birds_unique, int_nf_unique) %>%
+  mutate(    
+    StdBM = as.numeric(scale(StdBM)),
+    StdCM = as.numeric(scale(StdCM)),
+    StdGW = as.numeric(scale(StdGW)),
+    StdFW = as.numeric(scale(StdFW)),
+    StdHWI = as.numeric(scale(StdHWI)),
+    StdH = as.numeric(scale(StdH))) %>%
+  select(interaction, LogBM, LogCM, LogGW, LogFW, HWIndex, LogH, StdBM, StdCM, StdGW, StdFW, StdHWI, StdH, group)
+
+
 int_sd_hbt <- bind_rows(int_bats_hbt, int_birds_hbt, int_nf_hbt)
 
-#### Seeds and seedlings
+#### Seeds and seedlings ####
 
 ### Seeds
 
@@ -316,25 +392,25 @@ seedlings_plot <- seedlings %>%
 
 #### Pollination
 
-# # Number of components to be used:
-# cor <- cor.smooth(int_pol_hbt[, c("LogPL", "LogWL", "LogH", "LogCR")])
+# Number of components to be used:
+# cor <- cor.smooth(int_pol_unique[, c("LogPL", "LogWL", "LogH", "LogCR")])
 # eigen <- eigen(cor)
 # permuted <- matrix(nrow=1000, ncol=4)
 # for(i in 1:1000){
-#   permuted_data <- apply(int_pol_hbt[, c("LogPL", "LogWL", "LogH", "LogCR")],2,sample)
+#   permuted_data <- apply(int_pol_unique[, c("LogPL", "LogWL", "LogH", "LogCR")],2,sample)
 #   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
 # }
 # thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
 # print(eigen$values)
 # print(thresholds)
 
-pca_pol <- principal(int_pol_hbt[, c("StdPL", "StdWL", "StdH", "StdCR")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
+pca_pol <- principal(int_pol_unique[, c("StdPL", "StdWL", "StdH", "StdCR")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
 
 scores_pol <- as.data.frame(pca_pol$scores)
-scores_pol$Treatment3 <- int_pol_hbt$Treatment3
-scores_pol$interaction <- int_pol_hbt$interaction
-scores_pol$group <- int_pol_hbt$group
-scores_pol <- scores_pol %>% dplyr::select(group, interaction, Treatment3, RC1, RC2)
+scores_pol$interaction <- int_pol_unique$interaction
+scores_pol <- int_pol_hbt %>%
+  left_join(scores_pol, by = "interaction") %>% 
+  dplyr::select(group, interaction, Treatment3, RC1, RC2)
 
 scores_pol$Treatment3 <-  factor(scores_pol$Treatment3,
                                 levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
@@ -342,24 +418,24 @@ scores_pol$Treatment3 <-  factor(scores_pol$Treatment3,
 #### Seed-dispersal
 
 # # Number of components to be used:
-# cor <- cor.smooth(int_sd_hbt[, c("LogBM", "LogCM","LogGW", "LogFW", "HWIndex", "LogH")])
+# cor <- cor.smooth(int_sd_unique[, c("LogBM", "LogCM","LogGW", "LogFW", "HWIndex", "LogH")])
 # eigen <- eigen(cor)
 # permuted <- matrix(nrow=1000, ncol=6)
 # for(i in 1:1000){
-#   permuted_data <- apply(int_sd_hbt[, c("LogBM", "LogCM", "LogGW", "LogFW", "HWIndex", "LogH")],2,sample)
+#   permuted_data <- apply(int_sd_unique[, c("LogBM", "LogCM", "LogGW", "LogFW", "HWIndex", "LogH")],2,sample)
 #   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
 # }
 # thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
 # print(eigen$values)
 # print(thresholds)
 
-pca_sd <- principal(int_sd_hbt[, c("StdBM", "StdCM", "StdGW", "StdFW", "StdHWI", "StdH")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
+pca_sd <- principal(int_sd_unique[, c("StdBM", "StdCM", "StdGW", "StdFW", "StdHWI", "StdH")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
 
 scores_sd <- as.data.frame(pca_sd$scores)
-scores_sd$Treatment3 <- int_sd_hbt$Treatment3
-scores_sd$interaction <- int_sd_hbt$interaction
-scores_sd$group <- int_sd_hbt$group
-scores_sd <- scores_sd %>% dplyr::select(group, interaction, Treatment3, RC1, RC2)
+scores_sd$interaction <- int_sd_unique$interaction
+scores_sd <- int_sd_hbt %>%
+  left_join(scores_sd, by = "interaction") %>% 
+  dplyr::select(group, interaction, Treatment3, RC1, RC2)
 
 scores_sd$Treatment3 <-  factor(scores_sd$Treatment3,
                                   levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
@@ -372,16 +448,16 @@ scores_sd$Treatment3 <-  factor(scores_sd$Treatment3,
 #### Seeds
 
 # Number of components to be used:
-cor <- cor.smooth(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")])
-eigen <- eigen(cor)
-permuted <- matrix(nrow=1000, ncol=3)
-for(i in 1:1000){
-  permuted_data <- apply(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")],2,sample)
-  permuted[i,] <- eigen(cor.smooth(permuted_data))$values
-}
-thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
-print(eigen$values)
-print(thresholds)
+# cor <- cor.smooth(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")])
+# eigen <- eigen(cor)
+# permuted <- matrix(nrow=1000, ncol=3)
+# for(i in 1:1000){
+#   permuted_data <- apply(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")],2,sample)
+#   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
+# }
+# thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
+# print(eigen$values)
+# print(thresholds)
 
 pca_seeds <- principal(seeds_hbt[, c("StdWidth", "StdLength", "StdWeight")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
 
@@ -667,4 +743,8 @@ model_df <- expl %>% select(Treatment3, Plot_ID, RegTime) %>%
 
 str(model_df)
 
-# write.csv(model_df, file = here::here("data", "processed", "model_df.csv"), row.names = F)
+
+saveRDS(list(scores_pol, scores_sd), file = here::here("output", "scores_processes.2.RDS"))
+saveRDS(list(pca_pol, pca_sd), file = here::here("output", "pca_processes.2.RDS"))
+
+# write.csv(model_df, file = here::here("data", "processed", "model_df.2.csv"), row.names = F)

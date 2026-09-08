@@ -2,8 +2,7 @@
 # Reproducible entry point for the project
 # Usage: source("main_script.R")
 
-# Load/activate renv (will auto-install on first run if needed)
-if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
+# if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
 renv::activate()
 
 # Helpful project paths
@@ -27,7 +26,12 @@ pkgs <- c(
   "bootnet",
   "boot",
   "qgraph",
-  "brms"
+  "brms", # tb nao vou usar
+  "projpred", # n vou usar
+  "huge",
+  "rjags",
+  "flextable",
+  "officer"
 )
 
 missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]

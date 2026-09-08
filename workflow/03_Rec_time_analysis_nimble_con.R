@@ -1,6 +1,6 @@
 #### Data ####
 
-data <- read.csv("data/processed/model_df.csv")
+data <- read.csv("data/processed/model_df.3.csv")
 
 weights_df <- read.csv("data/processed/weights_df.csv")
 
@@ -9,9 +9,10 @@ data$type <- factor(ifelse(1:nrow(data) %in% grep("OG", data$Plot_ID), "old", "r
 
 dataSub <- subset(data, select = c(type, RegTime, ConIndex,  
                                    FDBees, FDMoths,  FDBat_pol, 
-                                   FDBats, FDBirds, FDNf, 
-                                   FDSeeds, AbSeeds, RichSeeds, ShnSeeds,
-                                   FDSdlng, AbSdlng, RichSdlng, ShnSdlng)) 
+                                   FDBats, FDBirds, FDNf#, 
+                                   # FDSeeds, AbSeeds, RichSeeds, ShnSeeds,
+                                   # FDSdlng, AbSdlng, RichSdlng, ShnSdlng
+                                   )) 
 table(dataSub$type)
 str(dataSub)
 
@@ -107,7 +108,7 @@ rec_df <- long %>%
   
 
 colnames(dataSub)[-c(1:3)]
-group_index_vec <- c(1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4) # 3 SD, 2Pol, 4Seeds, 4 Seedlings
+group_index_vec <- c(1, 1, 1, 2, 2, 2)#, 3, 3, 3, 3, 4, 4, 4, 4) # 3 SD, 2Pol, 4Seeds, 4 Seedlings
 
 constList <- list(
   variable_old = old_df$variable_old,
@@ -432,19 +433,19 @@ conn_values <- c(
 ### extracting posterior samples for metrics
 
 t_multi_conn_pol <- lapply(conn_values, function(cn) {
-  recovery_tmulti_nimble_w(samples, groups = 1:3, conn = cn, weights = w[1:3])
+  recovery_tmulti_nimble_w_con(samples, groups = 1:3, conn = cn, weights = w[1:3])
 })
 sum(is.na(t_multi_conn_pol))
 
 t_multi_conn_sd <- lapply(conn_values, function(cn) {
-  recovery_tmulti_nimble_w(samples, groups = 4:6, conn = cn, weights = w[4:6])
+  recovery_tmulti_nimble_w_con(samples, groups = 4:6, conn = cn, weights = w[4:6])
 })
 sum(is.na(t_multi_conn_sd))
 
 # per group:
 
 t_per_group_conn_pol <- lapply(conn_values, function(cn) {
-  recovery_tmulti_per_group_nimble(samples, groups = 1:3, conn = cn)
+  recovery_tmulti_per_group_nimble_con(samples, groups = 1:3, conn = cn)
 })
 sum(is.na(t_per_group_conn_pol[[1]]))
 sum(is.na(t_per_group_conn_pol[[2]]))
@@ -452,7 +453,7 @@ sum(is.na(t_per_group_conn_pol[[3]]))
 
 
 t_per_group_conn_sd <- lapply(conn_values, function(cn) {
-  recovery_tmulti_per_group_nimble(samples, groups = 4:6, conn = cn)
+  recovery_tmulti_per_group_nimble_con(samples, groups = 4:6, conn = cn)
 })
 sum(is.na(t_per_group_conn_sd[[1]]))
 sum(is.na(t_per_group_conn_sd[[2]]))
@@ -461,7 +462,7 @@ sum(is.na(t_per_group_conn_sd[[3]]))
 # seeds:
 
 t_seeds_conn <- lapply(conn_values, function(cn) {
-  recovery_tmulti_per_group_nimble(samples, groups = 7:10, conn = cn)
+  recovery_tmulti_per_group_nimble_con(samples, groups = 7:10, conn = cn)
 })
 sum(is.na(t_seeds_conn[[1]]))
 sum(is.na(t_seeds_conn[[2]]))
@@ -470,7 +471,7 @@ sum(is.na(t_seeds_conn[[3]]))
 # seedlings:
 
 t_seedlings_conn <- lapply(conn_values, function(cn) {
-  recovery_tmulti_per_group_nimble(samples, groups = 11:14, conn = cn)
+  recovery_tmulti_per_group_nimble_con(samples, groups = 11:14, conn = cn)
 })
 sum(is.na(t_seedlings_conn[[1]]))
 sum(is.na(t_seedlings_conn[[2]]))
@@ -522,16 +523,16 @@ rec_results <- list(
   dispersal = list(
     multi = qt90_multi_conn_sd,
     per_group = qt90_per_group_conn_sd
-  ),
-  plants = list(
-    seeds = qt90_seeds_conn,
-    seedlings = qt90_seedlings_conn
-  )
+  )#,
+  # plants = list(
+  #   seeds = qt90_seeds_conn,
+  #   seedlings = qt90_seedlings_conn
+  # )
 )
-# saveRDS(rec_results, "output/t90.rds")
-# saveRDS(samples, "output/model_posteriors.rds")
+# saveRDS(rec_results, "output/t90.4_con.rds")
+# saveRDS(samples, "output/model_posteriors.4_con.rds")
 # metadata <- list(var_names = colnames(dataSub)[-c(1,3)],
 #                  group_index = group_index_vec)
-# saveRDS(metadata, "output/model_metadata.rds")
+# saveRDS(metadata, "output/model_metadata_con.rds")
 
 

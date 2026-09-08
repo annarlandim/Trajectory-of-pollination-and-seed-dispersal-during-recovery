@@ -14,17 +14,17 @@ data$multi_sd <-apply(data[, names(w_sd)], 1, function(x) {
   sum(x * w_sd, na.rm = TRUE)
 })
 
-vars_to_scale <- c("ConIndex", "StrIndex", "multi_pol", "multi_sd", "FDSeeds", "FDSdlng")
+vars_to_scale <- c("ConIndex", "StrIndex", "multi_pol", "multi_sd", "ShnSeeds", "ShnSdlng")
 
 data_scaled <- data
 data_scaled[vars_to_scale] <- lapply(data[vars_to_scale], scale)
 
-complete_rows <- complete.cases(data_scaled[,c("multi_pol", "multi_sd", "ConIndex", "StrIndex", "FDSeeds", "FDSdlng")]) 
-complete_data <- data_scaled[complete_rows,c("multi_pol", "multi_sd", "ConIndex", "StrIndex", "FDSeeds", "FDSdlng")]
+complete_rows <- complete.cases(data_scaled[,c("multi_pol", "multi_sd", "ConIndex", "StrIndex", "ShnSeeds", "ShnSdlng")]) 
+complete_data <- data_scaled[complete_rows,c("multi_pol", "multi_sd", "ConIndex", "StrIndex", "ShnSeeds", "ShnSdlng")]
 
 ## Models:
 
-# Full (All paths)
+# # Full (All paths)
 # bf_pol_A   <- bf(multi_pol ~ ConIndex + StrIndex)
 # bf_sd_A    <- bf(multi_sd ~ ConIndex + StrIndex)
 # bf_seeds_A <- bf(FDSeeds | mi() ~ multi_pol + multi_sd + ConIndex + StrIndex) 
@@ -34,8 +34,8 @@ complete_data <- data_scaled[complete_rows,c("multi_pol", "multi_sd", "ConIndex"
 #   bf_pol_A + bf_sd_A + bf_seeds_A + bf_sdlng_A + set_rescor(FALSE),
 #   data = data_scaled, cores = 4, chains = 4, iter = 4000
 # )
-
-summary(fit_full)
+# 
+# summary(fit_full)
 
 # Models:
 
@@ -44,33 +44,33 @@ fit_pol_1 <- brm(
   multi_pol ~ ConIndex,
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_pol_1_all"
+  file = "output/SEM_models/fit_pol_1"
 )
-fit_pol_1 <- readRDS("output/SEM_models/fit_pol_1_all.RDS")
+fit_pol_1 <- readRDS("output/SEM_models/fit_pol_1.RDS")
 
 fit_pol_2 <- brm(
   multi_pol ~ StrIndex,
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_pol_2_all"
+  file = "output/SEM_models/fit_pol_2"
 )
-fit_pol_2 <- readRDS("output/SEM_models/fit_pol_2_all.RDS")
+fit_pol_2 <- readRDS("output/SEM_models/fit_pol_2.RDS")
 
 fit_pol_3 <- brm(
   multi_pol ~ ConIndex + StrIndex,
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_pol_3_all"
+  file = "output/SEM_models/fit_pol_3"
 )
-fit_pol_3 <- readRDS("output/SEM_models/fit_pol_3_all.RDS")
+fit_pol_3 <- readRDS("output/SEM_models/fit_pol_3.RDS")
 
 fit_pol_0 <- brm(
   multi_pol ~ 1,
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_pol_0_all"
+  file = "output/SEM_models/fit_pol_0"
 )
-fit_pol_0 <- readRDS("output/SEM_models/fit_pol_0_all.RDS")
+fit_pol_0 <- readRDS("output/SEM_models/fit_pol_0.RDS")
 
 ### Compare:
 
@@ -88,7 +88,7 @@ fit_sd_1 <- brm(
   multi_sd ~ ConIndex,
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_sd_1_all"
+  file = "output/SEM_models/fit_sd_1"
 )
 fit_sd_1 <- readRDS("output/SEM_models/fit_sd_1.RDS")
 
@@ -96,7 +96,7 @@ fit_sd_2 <- brm(
   multi_sd ~ StrIndex,
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_sd_2_all"
+  file = "output/SEM_models/fit_sd_2"
 )
 fit_sd_2 <- readRDS("output/SEM_models/fit_sd_2.RDS")
 
@@ -104,7 +104,7 @@ fit_sd_3 <- brm(
   multi_sd ~ ConIndex + StrIndex,
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_sd_3_all"
+  file = "output/SEM_models/fit_sd_3"
 )
 fit_sd_3 <- readRDS("output/SEM_models/fit_sd_3.RDS")
 
@@ -112,10 +112,9 @@ fit_sd_0 <- brm(
   multi_sd ~ 1,
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_sd_0_all"
+  file = "output/SEM_models/fit_sd_0"
 )
-fit_sd_0 <- readRDS("output/SEM_models/fit_sd_0_all.RDS")
-
+fit_sd_0 <- readRDS("output/SEM_models/fit_sd_0.RDS")
 
 ### Compare:
 loo_sd_1 <- loo(fit_sd_1, resp = "multisd")
@@ -132,185 +131,201 @@ bf_sd <- bf(multi_sd ~ StrIndex)
 fit_seeds_0 <- brm(
   bf_pol +
   bf_sd +
-  bf(FDSeeds | mi() ~ 1),
+  bf(ShnSeeds | mi() ~ 1),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_0"
+  file = "output/SEM_models/fit_seeds_0_shn"
 )
-fit_seeds_0 <- readRDS("output/SEM_models/fit_seeds_0.RDS")
+fit_seeds_0 <- readRDS("output/SEM_models/fit_seeds_0_shn.RDS")
 
 fit_seeds_1 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~ ConIndex),
+  bf(ShnSeeds | mi() ~ ConIndex),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_1"
+  file = "output/SEM_models/fit_seeds_1_shn"
 )
-fit_seeds_1 <- readRDS("output/SEM_models/fit_seeds_1.RDS")
+fit_seeds_1 <- readRDS("output/SEM_models/fit_seeds_1_shn.RDS")
 
 fit_seeds_2 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~ StrIndex),
+  bf(ShnSeeds | mi() ~ StrIndex),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_2"
+  file = "output/SEM_models/fit_seeds_2_shn"
 )
-fit_seeds_2 <- readRDS("output/SEM_models/fit_seeds_2.RDS")
+fit_seeds_2 <- readRDS("output/SEM_models/fit_seeds_2_shn.RDS")
 
 fit_seeds_3 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~ ConIndex + StrIndex),
+  bf(ShnSeeds | mi() ~ ConIndex + StrIndex),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_3"
+  file = "output/SEM_models/fit_seeds_3_shn"
 )
-fit_seeds_3 <- readRDS("output/SEM_models/fit_seeds_3.RDS")
+fit_seeds_3 <- readRDS("output/SEM_models/fit_seeds_3_shn.RDS")
 
 fit_seeds_4 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~ multi_sd),
+  bf(ShnSeeds | mi() ~ multi_sd),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_4"
+  file = "output/SEM_models/fit_seeds_4_shn"
 )
-fit_seeds_4 <- readRDS("output/SEM_models/fit_seeds_4.RDS")
+fit_seeds_4 <- readRDS("output/SEM_models/fit_seeds_4_shn.RDS")
 
 fit_seeds_5 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~ multi_pol),
+  bf(ShnSeeds | mi() ~ multi_pol),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_5"
+  file = "output/SEM_models/fit_seeds_5_shn"
 )
-fit_seeds_5 <- readRDS("output/SEM_models/fit_seeds_5.RDS")
+fit_seeds_5 <- readRDS("output/SEM_models/fit_seeds_5_shn.RDS")
 
 fit_seeds_6 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~ multi_pol + multi_sd),
+  bf(ShnSeeds | mi() ~ multi_pol + multi_sd),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_6"
+  file = "output/SEM_models/fit_seeds_6_shn"
 )
-fit_seeds_6 <- readRDS("output/SEM_models/fit_seeds_6.RDS")
+fit_seeds_6 <- readRDS("output/SEM_models/fit_seeds_6_shn.RDS")
 
 fit_seeds_7 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~ multi_pol + multi_sd + ConIndex),
+  bf(ShnSeeds | mi() ~ multi_pol + multi_sd + ConIndex),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_7"
+  file = "output/SEM_models/fit_seeds_7_shn"
 )
-fit_seeds_7 <- readRDS("output/SEM_models/fit_seeds_7.RDS")
+fit_seeds_7 <- readRDS("output/SEM_models/fit_seeds_7_shn.RDS")
 
 fit_seeds_8 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~ multi_pol + multi_sd + StrIndex),
+  bf(ShnSeeds | mi() ~ multi_pol + multi_sd + StrIndex),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_8"
+  file = "output/SEM_models/fit_seeds_8_shn"
 )
-fit_seeds_8 <- readRDS("output/SEM_models/fit_seeds_8.RDS")
+fit_seeds_8 <- readRDS("output/SEM_models/fit_seeds_8_shn.RDS")
 
 fit_seeds_9 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~  ConIndex + StrIndex + multi_pol),
+  bf(ShnSeeds | mi() ~  ConIndex + StrIndex + multi_pol),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_9"
+  file = "output/SEM_models/fit_seeds_9_shn"
 )
-fit_seeds_9 <- readRDS("output/SEM_models/fit_seeds_9.RDS")
+fit_seeds_9 <- readRDS("output/SEM_models/fit_seeds_9_shn.RDS")
 
 fit_seeds_10 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~ ConIndex + StrIndex + multi_sd),
+  bf(ShnSeeds | mi() ~ ConIndex + StrIndex + multi_sd),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_10"
+  file = "output/SEM_models/fit_seeds_10_shn"
 )
-fit_seeds_10 <- readRDS("output/SEM_models/fit_seeds_10.RDS")
+fit_seeds_10 <- readRDS("output/SEM_models/fit_seeds_10_shn.RDS")
 
 fit_seeds_11 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~  ConIndex  + multi_pol),
+  bf(ShnSeeds | mi() ~  ConIndex  + multi_pol),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_11"
+  file = "output/SEM_models/fit_seeds_11_shn"
 )
-fit_seeds_11 <- readRDS("output/SEM_models/fit_seeds_11.RDS")
+fit_seeds_11 <- readRDS("output/SEM_models/fit_seeds_11_shn.RDS")
 
 fit_seeds_12 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~  ConIndex  + multi_sd),
+  bf(ShnSeeds | mi() ~  ConIndex  + multi_sd),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_12"
+  file = "output/SEM_models/fit_seeds_12_shn"
 )
-fit_seeds_12 <- readRDS("output/SEM_models/fit_seeds_12.RDS")
+fit_seeds_12 <- readRDS("output/SEM_models/fit_seeds_12_shn.RDS")
 
 fit_seeds_13 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~  StrIndex  + multi_pol),
+  bf(ShnSeeds | mi() ~  StrIndex  + multi_pol),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_13"
+  file = "output/SEM_models/fit_seeds_13_shn"
 )
-fit_seeds_13 <- readRDS("output/SEM_models/fit_seeds_13.RDS")
+fit_seeds_13 <- readRDS("output/SEM_models/fit_seeds_13_shn.RDS")
 
 fit_seeds_14 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~  StrIndex  + multi_sd),
+  bf(ShnSeeds | mi() ~  StrIndex  + multi_sd),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_14"
+  file = "output/SEM_models/fit_seeds_14_shn"
 )
-fit_seeds_14 <- readRDS("output/SEM_models/fit_seeds_14.RDS")
+fit_seeds_14 <- readRDS("output/SEM_models/fit_seeds_14_shn.RDS")
 
 fit_seeds_15 <- brm(
   bf_pol +
     bf_sd +
-  bf(FDSeeds | mi() ~ ConIndex + StrIndex  + multi_sd + multi_pol),
+  bf(ShnSeeds | mi() ~ ConIndex + StrIndex  + multi_sd + multi_pol),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_seeds_15"
+  file = "output/SEM_models/fit_seeds_15_shn"
 )
-fit_seeds_15 <- readRDS("output/SEM_models/fit_seeds_15.RDS")
+fit_seeds_15 <- readRDS("output/SEM_models/fit_seeds_15_shn.RDS")
 
 ### Compare:
 
-loo_seeds_0 <- loo(fit_seeds_0, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_1 <- loo(fit_seeds_1, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_2 <- loo(fit_seeds_2, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_3 <- loo(fit_seeds_3, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_4 <- loo(fit_seeds_4, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_5 <- loo(fit_seeds_5, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_6 <- loo(fit_seeds_6, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_7 <- loo(fit_seeds_7, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_8 <- loo(fit_seeds_8, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_9 <- loo(fit_seeds_9, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_10 <- loo(fit_seeds_10, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_11 <- loo(fit_seeds_11, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_12 <- loo(fit_seeds_12, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_13 <- loo(fit_seeds_13, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_14 <- loo(fit_seeds_14, newdata = complete_data, resp = "FDSeeds")
-loo_seeds_15 <- loo(fit_seeds_15, newdata = complete_data, resp = "FDSeeds")
+loo_seeds_0 <- loo(fit_seeds_0, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_1 <- loo(fit_seeds_1, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_2 <- loo(fit_seeds_2, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_3 <- loo(fit_seeds_3, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_4 <- loo(fit_seeds_4, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_5 <- loo(fit_seeds_5, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_6 <- loo(fit_seeds_6, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_7 <- loo(fit_seeds_7, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_8 <- loo(fit_seeds_8, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_9 <- loo(fit_seeds_9, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_10 <- loo(fit_seeds_10, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_11 <- loo(fit_seeds_11, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_12 <- loo(fit_seeds_12, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_13 <- loo(fit_seeds_13, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_14 <- loo(fit_seeds_14, newdata = complete_data, resp = "ShnSeeds")
+loo_seeds_15 <- loo(fit_seeds_15, newdata = complete_data, resp = "ShnSeeds")
 
-loo_compare(loo_seeds_0, loo_seeds_1, loo_seeds_2, loo_seeds_3, loo_seeds_4, loo_seeds_5, loo_seeds_6, loo_seeds_7, loo_seeds_8, loo_seeds_9, loo_seeds_10, loo_seeds_11, loo_seeds_12, loo_seeds_13, loo_seeds_14, loo_seeds_15)
+loo_compare(loo_seeds_0, loo_seeds_1, loo_seeds_2, loo_seeds_3, loo_seeds_4, loo_seeds_5, loo_seeds_6, loo_seeds_7, 
+            # loo_seeds_8, 
+            loo_seeds_9, loo_seeds_10, loo_seeds_11, loo_seeds_12, loo_seeds_13, loo_seeds_14, loo_seeds_15
+            )
 
-bf_seeds <-  bf(FDSeeds | mi() ~ StrIndex)
+seeds_mw <- model_weights(
+  # fit_seeds_0, fit_seeds_1, 
+  fit_seeds_2,
+  # fit_seeds_3, fit_seeds_4, 
+  fit_seeds_5, fit_seeds_6,
+  # fit_seeds_7, 
+                          # fit_seeds_8, 
+                          fit_seeds_9, 
+  # fit_seeds_10, fit_seeds_11, fit_seeds_12, 
+  fit_seeds_13, 
+  # fit_seeds_14, fit_seeds_15,
+                          newdata = complete_data, resp = "ShnSeeds"
+)
+bf_seeds <-  bf(ShnSeeds | mi() ~ multi_pol)
 
 ## Seedlings
 
@@ -318,209 +333,89 @@ fit_sdlng_0 <- brm(
   bf_pol +
     bf_sd +
     bf_seeds +
-  bf(FDSdlng | mi() ~ 1),
+    bf(ShnSdlng | mi() ~ 1),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_sdlng_0"
+  file = "output/SEM_models/fit_sdlng_0_shn"
 )
-fit_sdlng_0 <- readRDS("output/SEM_models/fit_sdlng_0.RDS")
+fit_sdlng_0 <- readRDS("output/SEM_models/fit_sdlng_0_shn.RDS")
 
 fit_sdlng_1 <- brm(
   bf_pol +
     bf_sd +
     bf_seeds +
-  bf(FDSdlng | mi() ~ ConIndex),
+    bf(ShnSdlng | mi() ~ ConIndex),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_sdlng_1"
+  file = "output/SEM_models/fit_sdlng_1_shn"
 )
-fit_sdlng_1 <- readRDS("output/SEM_models/fit_sdlng_1.RDS")
+fit_sdlng_1 <- readRDS("output/SEM_models/fit_sdlng_1_shn.RDS")
 
 fit_sdlng_2 <- brm(
   bf_pol +
     bf_sd +
     bf_seeds +
-  bf(FDSdlng | mi() ~ StrIndex),
+    bf(ShnSdlng | mi() ~ StrIndex),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_sdlng_2"
+  file = "output/SEM_models/fit_sdlng_2_shn"
 )
-fit_sdlng_2 <- readRDS("output/SEM_models/fit_sdlng_2.RDS")
+fit_sdlng_2 <- readRDS("output/SEM_models/fit_sdlng_2_shn.RDS")
 
 fit_sdlng_3 <- brm(
   bf_pol +
     bf_sd +
     bf_seeds +
-  bf(FDSdlng | mi() ~ ConIndex + StrIndex),
+    bf(ShnSdlng | mi() ~ ConIndex + StrIndex),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_sdlng_3"
+  file = "output/SEM_models/fit_sdlng_3_shn"
 )
-fit_sdlng_3 <- readRDS("output/SEM_models/fit_sdlng_3.RDS")
-
-# fit_sdlng_4 <- brm(
-#   bf_pol +
-#     bf_sd +  
-#     bf_seeds +
-#   bf(FDSdlng | mi() ~ multi_sd),
-#   data = data_scaled,
-#   chains = 4, cores = 4, iter = 4000,
-#   file = "output/SEM_models/fit_sdlng_4"
-# )
-
-# fit_sdlng_5 <- brm(
-#   bf_pol +
-#     bf_sd +  
-#     bf_seeds +
-#   bf(FDSdlng | mi() ~ multi_pol),
-#   data = data_scaled,
-#   chains = 4, cores = 4, iter = 4000,
-#   file = "output/SEM_models/fit_sdlng_5"
-# )
-
-# fit_sdlng_6 <- brm(
-#   bf_pol +
-#     bf_sd +  
-#     bf_seeds +
-#   bf(FDSdlng | mi() ~ multi_pol + multi_sd),
-#   data = data_scaled,
-#   chains = 4, cores = 4, iter = 4000,
-#   file = "output/SEM_models/fit_sdlng_6"
-# )
-
-# fit_sdlng_7 <- brm(
-#   bf_pol +
-#     bf_sd +  
-#     bf_seeds +
-#   bf(FDSdlng | mi() ~ multi_pol + multi_sd + ConIndex),
-#   data = data_scaled,
-#   chains = 4, cores = 4, iter = 4000,
-#   file = "output/SEM_models/fit_sdlng_7"
-# )
-
-# fit_sdlng_8 <- brm(
-#   bf_pol +
-#     bf_sd +  
-#     bf_seeds +
-#   bf(FDSdlng | mi() ~ multi_pol + multi_sd + StrIndex),
-#   data = data_scaled,
-#   chains = 4, cores = 4, iter = 4000,
-#   file = "output/SEM_models/fit_sdlng_8"
-# )
-
-# fit_sdlng_9 <- brm(
-#   bf_pol +
-#     bf_sd +  
-#     bf_seeds +
-#   bf(FDSdlng | mi() ~  ConIndex + StrIndex + multi_pol),
-#   data = data_scaled,
-#   chains = 4, cores = 4, iter = 4000,
-#   file = "output/SEM_models/fit_sdlng_9"
-# )
-
-# fit_sdlng_10 <- brm(
-#   bf_pol +
-#     bf_sd +  
-#     bf_seeds +
-#   bf(FDSdlng | mi() ~ ConIndex + StrIndex + multi_sd),
-#   data = data_scaled,
-#   chains = 4, cores = 4, iter = 4000,
-#   file = "output/SEM_models/fit_sdlng_10"
-# )
-
-# fit_sdlng_11 <- brm(
-#   bf_pol +
-#     bf_sd +  
-#     bf_seeds +
-#   bf(FDSdlng | mi() ~  ConIndex  + multi_pol),
-#   data = data_scaled,
-#   chains = 4, cores = 4, iter = 4000,
-#   file = "output/SEM_models/fit_sdlng_11"
-# )
-
-# fit_sdlng_12 <- brm(
-#   bf_pol +
-#     bf_sd +  
-#     bf_seeds +
-#   bf(FDSdlng | mi() ~  ConIndex  + multi_sd),
-#   data = data_scaled,
-#   chains = 4, cores = 4, iter = 4000,
-#   file = "output/SEM_models/fit_sdlng_12"
-# )
-
-# fit_sdlng_13 <- brm(
-#   bf_pol +
-#     bf_sd +  
-#     bf_seeds +
-#   bf(FDSdlng | mi() ~  StrIndex  + multi_pol),
-#   data = data_scaled,
-#   chains = 4, cores = 4, iter = 4000,
-#   file = "output/SEM_models/fit_sdlng_13"
-# )
-
-# fit_sdlng_14 <- brm(
-#   bf_pol +
-#     bf_sd +  
-#     bf_seeds +
-#   bf(FDSdlng | mi() ~  StrIndex  + multi_sd),
-#   data = data_scaled,
-#   chains = 4, cores = 4, iter = 4000,
-#   file = "output/SEM_models/fit_sdlng_14"
-# )
-
-# fit_sdlng_15 <- brm(
-#   bf_pol +
-#     bf_sd +  
-#     bf_seeds +
-#   bf(FDSdlng | mi() ~ ConIndex + StrIndex  + multi_sd + multi_pol),
-#   data = data_scaled,
-#   chains = 4, cores = 4, iter = 4000,
-#   file = "output/SEM_models/fit_sdlng_15"
-# )
+fit_sdlng_3 <- readRDS("output/SEM_models/fit_sdlng_3_shn.RDS")
 
 fit_sdlng_16 <- brm(
   bf_pol +
     bf_sd +
     bf_seeds +
-  bf(FDSdlng | mi() ~ mi(FDSeeds)), # rescor = FALSE by default
+    bf(ShnSdlng | mi() ~ mi(ShnSeeds)), # rescor = FALSE by default
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_sdlng_16"
+  file = "output/SEM_models/fit_sdlng_16_shn"
 )
-fit_sdlng_16 <- readRDS("output/SEM_models/fit_sdlng_16.RDS")
+fit_sdlng_16 <- readRDS("output/SEM_models/fit_sdlng_16_shn.RDS")
 
 fit_sdlng_17 <- brm(
   bf_pol +
     bf_sd +
     bf_seeds +
-  bf (FDSdlng | mi() ~ mi(FDSeeds) + ConIndex), # rescor = FALSE by default
+    bf (ShnSdlng | mi() ~ mi(ShnSeeds) + ConIndex), # rescor = FALSE by default
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_sdlng_17"
+  file = "output/SEM_models/fit_sdlng_17_shn"
 )
-fit_sdlng_17 <- readRDS("output/SEM_models/fit_sdlng_17.RDS")
+fit_sdlng_17 <- readRDS("output/SEM_models/fit_sdlng_17_shn.RDS")
 
 fit_sdlng_18 <- brm(
   bf_pol +
     bf_sd +
     bf_seeds +
-  bf(FDSdlng | mi() ~ mi(FDSeeds) + StrIndex), # rescor = FALSE by default
+    bf(ShnSdlng | mi() ~ mi(ShnSeeds) + StrIndex), # rescor = FALSE by default
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_sdlng_18"
+  file = "output/SEM_models/fit_sdlng_18_shn"
 )
-fit_sdlng_18 <- readRDS("output/SEM_models/fit_sdlng_18.RDS")
+fit_sdlng_18 <- readRDS("output/SEM_models/fit_sdlng_18_shn.RDS")
 
 fit_sdlng_19 <- brm(
   bf_pol +
     bf_sd +
     bf_seeds +
-  bf(FDSdlng | mi() ~ mi(FDSeeds) + StrIndex + ConIndex), # rescor = FALSE by default
+    bf(ShnSdlng | mi() ~ mi(ShnSeeds) + StrIndex + ConIndex), # rescor = FALSE by default
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_sdlng_19"
+  file = "output/SEM_models/fit_sdlng_19_shn"
 )
-fit_sdlng_19 <- readRDS("output/SEM_models/fit_sdlng_19.RDS")
+fit_sdlng_19 <- readRDS("output/SEM_models/fit_sdlng_19_shn.RDS")
 
 # fit_sdlng_20 <- brm(
 #   bf_pol +
@@ -643,10 +538,10 @@ fit_sdlng_19 <- readRDS("output/SEM_models/fit_sdlng_19.RDS")
 # )
 
 ### Compare:
-loo_sdlng_0 <- loo(fit_sdlng_0, newdata = complete_data, resp = "FDSdlng")
-loo_sdlng_1 <- loo(fit_sdlng_1, newdata = complete_data, resp = "FDSdlng")
-loo_sdlng_2 <- loo(fit_sdlng_2, newdata = complete_data, resp = "FDSdlng")
-loo_sdlng_3 <- loo(fit_sdlng_3, newdata = complete_data, resp = "FDSdlng")
+loo_sdlng_0 <- loo(fit_sdlng_0, newdata = complete_data, resp = "ShnSdlng")
+loo_sdlng_1 <- loo(fit_sdlng_1, newdata = complete_data, resp = "ShnSdlng")
+loo_sdlng_2 <- loo(fit_sdlng_2, newdata = complete_data, resp = "ShnSdlng")
+loo_sdlng_3 <- loo(fit_sdlng_3, newdata = complete_data, resp = "ShnSdlng")
 # loo_sdlng_4 <- loo(fit_sdlng_4, newdata = complete_data, resp = "FDSdlng")
 # loo_sdlng_5 <- loo(fit_sdlng_5, newdata = complete_data, resp = "FDSdlng")
 # loo_sdlng_6 <- loo(fit_sdlng_6, newdata = complete_data, resp = "FDSdlng")
@@ -659,10 +554,10 @@ loo_sdlng_3 <- loo(fit_sdlng_3, newdata = complete_data, resp = "FDSdlng")
 # loo_sdlng_13 <- loo(fit_sdlng_13, newdata = complete_data, resp = "FDSdlng")
 # loo_sdlng_14 <- loo(fit_sdlng_14, newdata = complete_data, resp = "FDSdlng")
 # loo_sdlng_15 <- loo(fit_sdlng_15, newdata = complete_data, resp = "FDSdlng")
-loo_sdlng_16 <- loo(fit_sdlng_16, newdata = complete_data, resp = "FDSdlng")
-loo_sdlng_17 <- loo(fit_sdlng_17, newdata = complete_data, resp = "FDSdlng")
-loo_sdlng_18 <- loo(fit_sdlng_18, newdata = complete_data, resp = "FDSdlng")
-loo_sdlng_19 <- loo(fit_sdlng_19, newdata = complete_data, resp = "FDSdlng")
+loo_sdlng_16 <- loo(fit_sdlng_16, newdata = complete_data, resp = "ShnSdlng")
+loo_sdlng_17 <- loo(fit_sdlng_17, newdata = complete_data, resp = "ShnSdlng")
+loo_sdlng_18 <- loo(fit_sdlng_18, newdata = complete_data, resp = "ShnSdlng")
+loo_sdlng_19 <- loo(fit_sdlng_19, newdata = complete_data, resp = "ShnSdlng")
 # loo_sdlng_20 <- loo(fit_sdlng_20, newdata = complete_data, resp = "FDSdlng")
 # loo_sdlng_21 <- loo(fit_sdlng_21, newdata = complete_data, resp = "FDSdlng")
 # loo_sdlng_22 <- loo(fit_sdlng_22, newdata = complete_data, resp = "FDSdlng")
@@ -684,18 +579,28 @@ loo_compare(loo_sdlng_0, loo_sdlng_1, loo_sdlng_2, loo_sdlng_3,
             # loo_sdlng_24, loo_sdlng_25, loo_sdlng_26, loo_sdlng_27, loo_sdlng_28, loo_sdlng_29, loo_sdlng_30, loo_sdlng_31
             )
 
+sdlng_mw <- model_weights(fit_sdlng_0, fit_sdlng_1, fit_sdlng_2, fit_sdlng_3,
+                          fit_sdlng_16, fit_sdlng_17, fit_sdlng_18, fit_sdlng_19,
+                          newdata = complete_data, resp = "ShnSdlng"
+)
+
 # Final model:
+bf_pol
+bf_sd
+bf_seeds
 
 fit_final <- brm(
   bf(multi_pol ~ 1) +
     bf(multi_sd ~ StrIndex) +  
-    bf(FDSeeds | mi() ~ StrIndex) +
-    bf(FDSdlng | mi() ~ 1),
+    bf(ShnSeeds | mi() ~ multi_pol) +
+    bf(ShnSdlng | mi() ~ StrIndex),
   data = data_scaled,
   chains = 4, cores = 4, iter = 4000,
-  file = "output/SEM_models/fit_final_all"
+  file = "output/SEM_models/fit_final_shn"
 )
-fit_final <- readRDS("output/SEM_models/fit_final_all.RDS")
+
+fit_final <- readRDS(file = "output/SEM_models/fit_final_shn.RDS")
+
 summary(fit_final)
 
 pp_check(fit_final, resp = "multipol")
@@ -704,6 +609,4 @@ pp_check(fit_final, resp = "FDSeeds")
 pp_check(fit_final, resp = "FDSdlng")
 
 bayes_R2(fit_final, resp = c("multipol", "multisd"))
-bayes_R2(fit_final, resp = c("FDSeeds", "FDSdlng"), newdata = complete_data)
-
-######################################################################################
+bayes_R2(fit_final, resp = c("ShnSeeds", "ShnSdlng"), newdata = complete_data)

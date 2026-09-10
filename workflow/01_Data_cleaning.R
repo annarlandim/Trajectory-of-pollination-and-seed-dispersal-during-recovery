@@ -1,5 +1,9 @@
 #### Cleaning data sets ####
 
+library(dplyr)
+library(tidyr)
+library(stringr)
+
 master <- read.csv(file = "data/raw/Ecuador Plots_Master_V2.csv")
 master$RegTime <- 2023 - master$Regeneration_year
 master$RegTime[master$Treatment == "active cacao"] <- 0
@@ -67,50 +71,6 @@ int_bat <- int_bat %>%
   uncount(weights = n)
 
 #### Plants ####
-
-## Seeds
-
-seed_rain <- read.csv(file = here("data/raw/SP4/seed_rain.csv"))
-colnames(seed_rain)[c(2,5)] <- c("Plot_ID", "Morphotypes")
-seed_rain[seed_rain$Morphotypes == "M21", "plant_species"] <- "Wettinia_quinaria"
-seed_rain[seed_rain$Morphotypes == "M44", "plant_species"] <- "Piper_grande"
-
-seed_rain <- seed_rain %>% 
-  # remove unwanted interactions (cultivated plants)
-  filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava", "Borojoa_sp.", "Persea_americana")) %>%
-  mutate(
-    plant_species = na_if(plant_species, ""), 
-    plant_species = ifelse(
-      is.na(plant_species), 
-      Morphotypes,  
-      plant_species  
-    ),
-    Genus = ifelse(
-      !is.na(plant_species),  
-      str_extract(plant_species, "^[^_]+"),  
-      Morphotypes)) %>%
-  filter(DispersalSyndrome == "zoochory") %>%
-  left_join(select(master, Plot_ID, RegTime, Treatment2), by = "Plot_ID") %>%
-  select(Plot_ID, plant_species, RegTime, Treatment2)
-
-
-## Seedlings
-
-seedlings <- read.csv(file = "data/raw/tree_seedling_ind_FT.csv")
-str(seedlings)
-
-seedlings <- seedlings %>%
-  rename(Plot_ID = plot, Species_name = species) %>%
-  left_join(select(master, Plot_ID, RegTime, Treatment2), by = "Plot_ID") %>%
-  mutate(
-    Species_name = str_replace(
-      string = Species_name, 
-      pattern = "cf\\._|Cf\\._",
-      replacement = ""
-    )) %>%
-  select(Plot_ID, Species_name, RegTime, Treatment2)
-
-## Adults
 
 Plants <- read.csv(file = "data/raw/SP4/traits_plants_org.csv")[-c(1:3),-1]
 trees <- read.csv(file = "data/raw/tree_data_final.csv")
@@ -370,22 +330,6 @@ int_bat <- int_bat %>%
     TRUE ~ as.character(Treatment2) 
   )))
 
-seed_rain <- seed_rain %>%
-  mutate(Treatment3 = as.factor(case_when(
-    Treatment2 %in% c("active cacao", "active pasture") ~ "regeneration early",
-    Treatment2 %in% c("cacao regeneration early", "pasture regeneration early") ~ "regeneration early",
-    Treatment2 %in% c("cacao regeneration late", "pasture regeneration late") ~ "regeneration late",
-    TRUE ~ as.character(Treatment2) 
-  )))
-
-seedlings <- seedlings %>%
-  mutate(Treatment3 = as.factor(case_when(
-    Treatment2 %in% c("active cacao", "active pasture") ~ "regeneration early",
-    Treatment2 %in% c("cacao regeneration early", "pasture regeneration early") ~ "regeneration early",
-    Treatment2 %in% c("cacao regeneration late", "pasture regeneration late") ~ "regeneration late",
-    TRUE ~ as.character(Treatment2) 
-  )))
-
 Plants <- Plants %>%
   mutate(Treatment3 = as.factor(case_when(
     Treatment2 %in% c("active cacao", "active pasture") ~ "regeneration early",
@@ -605,11 +549,6 @@ traits_nf <- traits_nf %>%
 
 # Plant traits
 
-### Seeds
-
-traits_seeds <- read.csv("data/raw/SP4/seeds_traits.csv")
-# already clean
-
 tree_height <- read.csv("data/raw/tree_data_measures.csv")
 head(tree_height)
 
@@ -622,125 +561,6 @@ mean_tree_height <- trees %>%
   rename(value_numeric = mean_height) %>%
   mutate(trait = "height")
 # warning is because of traits like ripeness, which are not numeric
-
-traits_seeds <- traits_seeds %>%
-  left_join(mean_tree_height %>% select(Species, value_numeric), 
-            by = c("plant_species" = "Species")) %>%
-  mutate(Height = coalesce(Height, value_numeric)) %>%
-  select(-value_numeric)
-
-colnames(traits_seeds)
-
-perc_NA_seeds <- traits_seeds %>%
-  summarise(
-    na_SeedWidth = sum(is.na(SeedWidth)), # 0
-    na_SeedLength = sum(is.na(SeedLength)), # 0
-    na_SeedWeight = sum(is.na(SeedWeight)), # 0
-    na_Height = sum(is.na(Height)), # 22.39
-    na_WoodDensity = sum(is.na(WoodDensity)), # 50.75
-    n_row = n()) %>%
-  mutate(
-    p_SeedWidth = (na_SeedWidth/n_row) *100,
-    p_SeedLength = (na_SeedLength/n_row) *100,
-    p_SeedWeight = (na_SeedWeight/n_row) *100,
-    p_Height = (na_Height/n_row) *100,
-    p_WoodDensity = (na_WoodDensity/n_row) *100
-  )
-
-traits_seeds <- traits_seeds %>%
-  mutate(Genus = word(plant_species, 1, sep = "_")) %>%
-  group_by(Genus) %>%
-  mutate(SeedWidth = replace_na(data = SeedWidth, replace = mean(SeedWidth, na.rm = T)),
-         SeedLength = replace_na(data = SeedLength, replace = mean(SeedLength, na.rm = T)),
-         SeedWeight = replace_na(data = SeedWeight, replace = mean(SeedWeight, na.rm = T)),
-         Height = replace_na(data = Height, replace = mean(Height, na.rm = T)),
-         WoodDensity = replace_na(data = WoodDensity, replace = mean(WoodDensity, na.rm = T))) %>%
-  ungroup()
-
-### Seedlings
-
-traits_seedlings <- read.csv("data/raw/FT_forest.csv")
-
-traits_seedlings <- traits_seedlings %>%
-  mutate(
-  sp = str_replace_all(sp_ageF_b, "\u00A0", "_"),
-  sp = str_squish(sp),
-  ageClass = str_match(sp, "(?:^|_)(young|old)(?:_|$)")[, 2],
-  sp_nosuf = str_remove(sp, "(?:_(CR|PR|OG|AC|AP|ITV\\d+))+$"),
-  Species_name = if_else(
-    !is.na(ageClass),
-    str_trim(str_remove(sp_nosuf, paste0("(?:^|_)", ageClass, "(?:_|$)"))),
-    sp_nosuf
-  ),
-  Species_name = str_replace_all(Species_name, "\\s+", "_"),
-  Species_name = str_replace(Species_name, "_+$", ""),
-  Species_name = na_if(Species_name, "")
-) %>%
-  mutate(
-    Species_name = str_replace(
-      string = Species_name, 
-      pattern = "cf\\._", 
-      replacement = ""
-    )) %>%
-  select(Species_name, ageClass,
-         toughness = toughness_N,
-         thickness = thickness_mm,
-         SLA, LDMC)
-
-age_classes <- c("young", "old")
-
-traits_seedlings <- traits_seedlings %>%
-  mutate(ageClass = if_else(is.na(ageClass), "noClass", ageClass)) %>%
-  uncount(weights = if_else(ageClass == "noClass", 2L, 1L), .id = "k") %>%
-  mutate(ageClass = if_else(ageClass == "noClass", age_classes[k], ageClass)) %>%
-  select(-k)
-
-traits_seedlings <- traits_seedlings %>%
-  pivot_longer(cols = c(toughness, thickness, SLA, LDMC),
-               names_to = "trait", values_to = "value") %>%
-  mutate(name = paste0(trait, "_", ageClass)) %>%
-  select(Species_name, name, value) %>%
-  pivot_wider(names_from = name, values_from = value,
-              values_fn = list(value = mean))  
-
-colnames(traits_seedlings)
-
-perc_NA_seedlings <- traits_seedlings %>%
-  summarise(
-    na_toughness_young = sum(is.na(toughness_young)), # 16.67
-    na_toughness_old = sum(is.na(toughness_old)), # 13.72
-    na_thickness_young = sum(is.na(thickness_young)), # 16.67
-    na_thickness_old = sum(is.na(thickness_old)), # 15.69
-    na_SLA_young = sum(is.na(SLA_young)), # 16.67
-    na_SLA_old = sum(is.na(SLA_old)), # 13.72
-    na_LDMC_young = sum(is.na(LDMC_young)), # 16.67
-    na_LDMC_old = sum(is.na(LDMC_old)), # 15.69
-    n_row = n()) %>%
-  mutate(
-    p_toughness_young = (na_toughness_young/n_row) *100,
-    p_toughness_old = (na_toughness_old/n_row) *100,
-    p_thickness_young = (na_thickness_young/n_row) *100,
-    p_thickness_old = (na_thickness_old/n_row) *100,
-    p_SLA_young = (na_SLA_young/n_row) *100,
-    p_SLA_old = (na_SLA_old/n_row) *100,
-    p_LDMC_young = (na_LDMC_young/n_row) *100,
-    p_LDMC_old = (na_LDMC_old/n_row) *100,
-  )
-
-traits_seedlings <- traits_seedlings %>%
-mutate(Genus = word(Species_name, 1, sep = "_")) %>%
-  group_by(Genus) %>%
-  mutate(toughness_young = replace_na(data = toughness_young, replace = mean(toughness_young, na.rm = T)),
-         toughness_old = replace_na(data = toughness_old, replace = mean(toughness_old, na.rm = T)),
-         thickness_young = replace_na(data = thickness_young, replace = mean(thickness_young, na.rm = T)),
-         thickness_old = replace_na(data = thickness_old, replace = mean(thickness_old, na.rm = T)),
-         SLA_young = replace_na(data = SLA_young, replace = mean(SLA_young, na.rm = T)),
-         SLA_old = replace_na(data = SLA_old, replace = mean(SLA_old, na.rm = T)),
-         LDMC_young = replace_na(data = LDMC_young, replace = mean(LDMC_young, na.rm = T)),
-         LDMC_old = replace_na(data = LDMC_old, replace = mean(LDMC_old, na.rm = T))) %>%
-  ungroup()
-
-### Adults
 
 head(mean_tree_height)
 
@@ -882,35 +702,26 @@ all_traits_plants <- all_traits_plants %>%
 
 all_traits_plants$CorLength <- all_traits_plants$CorLength + 1e-6  # to avoid 0s, which will become -Inf after log
 
-# write.csv(int_bees, file = here::here("data", "processed", "int_bees.csv"), row.names = F)
-# write.csv(int_moths, file = here::here("data", "processed", "int_moths.csv"), row.names = F)
-# write.csv(int_bat_pol, file = here::here("data", "processed", "int_bat_pol.csv"), row.names = F)
-# write.csv(int_birds, file = here::here("data", "processed", "int_birds.csv"), row.names = F)
-# write.csv(int_bat, file = here::here("data", "processed", "int_bats.csv"), row.names = F)
-# write.csv(int_nf, file = here::here("data", "processed", "int_nf.csv"), row.names = F)
+write.csv(int_bees, file = here::here("data", "processed", "int_bees.csv"), row.names = F)
+write.csv(int_moths, file = here::here("data", "processed", "int_moths.csv"), row.names = F)
+write.csv(int_bat_pol, file = here::here("data", "processed", "int_bat_pol.csv"), row.names = F)
+write.csv(int_birds, file = here::here("data", "processed", "int_birds.csv"), row.names = F)
+write.csv(int_bat, file = here::here("data", "processed", "int_bats.csv"), row.names = F)
+write.csv(int_nf, file = here::here("data", "processed", "int_nf.csv"), row.names = F)
 
-# write.csv(seed_rain, file = here::here("data", "processed", "seeds.csv"), row.names = F)
-# write.csv(seedlings, file = here::here("data", "processed", "seedlings_ind.csv"), row.names = F)
-
-# write.csv(traits_bee, file = here::here("data", "processed", "traits_bees.csv"), row.names = F)
-# write.csv(traits_moth, file = here::here("data", "processed", "traits_moth.csv"), row.names = F)
-# write.csv(traits_birds, file = here::here("data", "processed", "traits_birds.csv"), row.names = F)
-# write.csv(traits_bat, file = here::here("data", "processed","traits_bats.csv"), row.names = F)
-# write.csv(traits_nf, file = here::here("data", "processed", "traits_nf.csv"), row.names = F)
-# write.csv(all_traits_plants, file = here::here("data", "processed", "traits_plants.csv"), row.names = F)
-# write.csv(traits_seedlings, file = here::here("data", "processed", "traits_seedlings.csv"), row.names = F)
-# write.csv(traits_seeds, file = here::here("data", "processed", "traits_seeds.csv"), row.names = F)
+write.csv(traits_bee, file = here::here("data", "processed", "traits_bees.csv"), row.names = F)
+write.csv(traits_moth, file = here::here("data", "processed", "traits_moth.csv"), row.names = F)
+write.csv(traits_birds, file = here::here("data", "processed", "traits_birds.csv"), row.names = F)
+write.csv(traits_bat, file = here::here("data", "processed","traits_bats.csv"), row.names = F)
+write.csv(traits_nf, file = here::here("data", "processed", "traits_nf.csv"), row.names = F)
+write.csv(all_traits_plants, file = here::here("data", "processed", "traits_plants.csv"), row.names = F)
 
 #### Vegetation structure ####
 
-rec <- read.csv("data/raw/Table S4.csv")
 con <- read.csv("data/raw/Felicity_data.csv")
-vvh <- read.csv("data/raw/verticalVH.csv")
 
 env_variables <- master[c(1:20, 22:62,64),] %>% 
-  left_join(select(vvh, Plot_ID, VerticalVH), by = "Plot_ID") %>%
-  left_join(select(rec, Plot_ID, Max_tree_height, AGB_all, AGB_wild, sr_all, sr_wild), by = "Plot_ID") %>%
-  left_join(select(con, Plot_ID, Forest_1km, Forest_500m, Forest_100m, Distance_forest, Distance_edge, Patch_ha, Cacao_1km, Cacao_Reg1_1km, Cacao_Reg2_1km, Pasture_1km, Pasture_Reg1_1km, Pasture_Reg2_1km), by = "Plot_ID")
+    left_join(select(con, Plot_ID, Forest_1km, Forest_500m, Forest_100m, Distance_forest, Distance_edge, Patch_ha, Cacao_1km, Cacao_Reg1_1km, Cacao_Reg2_1km, Pasture_1km, Pasture_Reg1_1km, Pasture_Reg2_1km), by = "Plot_ID")
 
 env_variables <- env_variables %>%
   mutate(Treatment3 = as.factor(case_when(
@@ -920,4 +731,4 @@ env_variables <- env_variables %>%
     TRUE ~ as.character(Treatment2) 
   )))
 
-# write.csv(env_variables, file = here::here("data", "processed", "env_variables.csv"), row.names = F)
+write.csv(env_variables, file = here::here("data", "processed", "env_variables.csv"), row.names = F)

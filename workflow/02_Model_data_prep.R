@@ -1,3 +1,4 @@
+library(psych)
 
 #### Data frames ####
 
@@ -13,12 +14,6 @@ int_bats <- read.csv(file = "data/processed/int_bats.csv")
 int_birds <- read.csv(file = "data/processed/int_birds.csv")
 int_nf <- read.csv(file = "data/processed/int_nf.csv")
 
-# Seeds
-seeds <- read.csv(file = "data/processed/seeds.csv")
-
-# Seedlings
-seedlings <- read.csv(file = "data/processed/seedlings_ind.csv")
-
 # Traits
 
 traits_bees <- read.csv(file = "data/processed/traits_bees.csv")
@@ -29,8 +24,6 @@ traits_birds <- read.csv(file = "data/processed/traits_birds.csv")
 traits_nf <- read.csv(file = "data/processed/traits_nf.csv")
 
 traits_plants <- read.csv(file = "data/processed/traits_plants.csv")
-traits_seeds <- read.csv(file = "data/processed/traits_seeds.csv")
-traits_seedlings <- read.csv(file = "data/processed/traits_seedlings.csv")
 
 #### Plants per group:
 
@@ -240,78 +233,6 @@ int_nf_plot <- int_nf %>%
 
 int_sd_hbt <- bind_rows(int_bats_hbt, int_birds_hbt, int_nf_hbt)
 
-#### Seeds and seedlings
-
-### Seeds
-
-seeds_hbt <- seeds %>%
-  group_by(plant_species, Treatment3) %>%
-  filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
-                              "Borojoa_sp.", "Persea_americana")) %>%
-  summarise(Treatment3 = first(Treatment3), 
-            Species_name = first(plant_species), 
-            .groups = 'drop') %>%
-  left_join(traits_seeds, by = "plant_species", relationship = "many-to-many") %>%
-  ungroup()%>%
-  mutate(LogWidth = log(SeedWidth), LogLength = log(SeedLength), LogWeight = log(SeedWeight)) %>%
-  mutate(    
-    StdWidth = as.numeric(scale(LogWidth)),
-    StdLength = as.numeric(scale(LogLength)),
-    StdWeight = as.numeric(scale(LogWeight))) %>%
-  select(Treatment3, Species_name, LogWidth, LogLength, LogWeight,
-         StdWidth, StdLength, StdWeight)
-
-seeds_plot <- seeds %>%
-  group_by(plant_species, Plot_ID) %>%
-  filter(!plant_species %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
-                              "Borojoa_sp.", "Persea_americana")) %>%
-  summarise(Treatment3 = first(Treatment3),
-            Plot_ID = first(Plot_ID), RegTime = first(RegTime),
-            Species_name = first(plant_species),
-            .groups = "drop") 
-
-### Seedlings
-# BETTER CHECK SEED DISPERSAL SYNDROME OF SEEDLINGS
-
-colSums(is.na(traits_seedlings)) # old has fewer NAs
-
-seedlings_hbt <- seedlings %>%
-  # filter(Plot_ID %in% master$Plot_ID[master$PREX == "PREX"]) %>%
-  group_by(Species_name, Treatment3) %>%
-  filter(!Species_name %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
-                               "Borojoa_sp.", "Persea_americana")) %>%
-  filter(!Species_name %in% c("Coussapoa_villosa", "")) %>% # filter out non-zoochoric species based on Landim et al. 2026
-  summarise(Treatment3 = first(Treatment3), 
-            Species_name = first(Species_name), 
-            .groups = 'drop') %>%
-  left_join(traits_seedlings, by = "Species_name", relationship = "many-to-many") %>%
-  ungroup()%>%
-  mutate(Genus = word(Species_name, 1, sep = "_")) %>%
-  group_by(Genus) %>%
-  mutate(toughness = replace_na(data = toughness_old, replace = mean(toughness_old, na.rm = T)),
-         thickness = replace_na(data = thickness_old, replace = mean(thickness_old, na.rm = T)),
-         SLA = replace_na(data = SLA_old, replace = mean(SLA_old, na.rm = T)),
-         LDMC = replace_na(data = LDMC_old, replace = mean(LDMC_old, na.rm = T))) %>%
-  ungroup() %>%
-  mutate(LogThough = log(toughness), LogThick = log(thickness)) %>%
-  mutate(    
-    StdThough = as.numeric(scale(LogThough)),
-    StdThick = as.numeric(scale(LogThick)),
-    StdSLA = as.numeric(scale(SLA)),
-    StdLDMC = as.numeric(scale(LDMC))) %>%
-  select(Treatment3, Species_name, LogThough, LogThick, SLA, LDMC,
-         StdThough, StdThick, StdSLA, StdLDMC)
-
-seedlings_plot <- seedlings %>%
-  # filter(Plot_ID %in% master$Plot_ID[master$PREX == "PREX"]) %>%
-  group_by(Species_name, Plot_ID) %>%
-  filter(!Species_name %in% c("Theobroma_cacao", "Manihot_esculenta", "Artocarpus_heterophyllus", "Psidium_guajava",
-                               "Borojoa_sp.", "Persea_americana")) %>%
-  summarise(Treatment3 = first(Treatment3),
-            Plot_ID = first(Plot_ID), RegTime = first(RegTime),
-            Species_name = first(Species_name),
-            .groups = "drop") 
-
 #### Functional spaces per habitat ####
 
 #### Pollination
@@ -363,54 +284,6 @@ scores_sd <- scores_sd %>% dplyr::select(group, interaction, Treatment3, RC1, RC
 
 scores_sd$Treatment3 <-  factor(scores_sd$Treatment3,
                                   levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
-
-#### Seeds
-
-# Number of components to be used:
-# cor <- cor.smooth(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")])
-# eigen <- eigen(cor)
-# permuted <- matrix(nrow=1000, ncol=3)
-# for(i in 1:1000){
-#   permuted_data <- apply(seeds_hbt[, c("LogWidth", "LogLength", "LogWeight")],2,sample)
-#   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
-# }
-# thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
-# print(eigen$values)
-# print(thresholds)
-
-pca_seeds <- principal(seeds_hbt[, c("StdWidth", "StdLength", "StdWeight")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
-
-scores_seeds <- as.data.frame(pca_seeds$scores)
-scores_seeds$Treatment3 <- seeds_hbt$Treatment3
-scores_seeds$Species_name <- seeds_hbt$Species_name
-scores_seeds <- scores_seeds %>% dplyr::select(Species_name, Treatment3, RC1, RC2)
-
-scores_seeds$Treatment3 <-  factor(scores_seeds$Treatment3,
-                                   levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
-
-#### Seedlings
-
-# Number of components to be used:
-# cor <- cor.smooth(seedlings_hbt[, c("LogThough", "LogThick", "SLA", "LDMC")])
-# eigen <- eigen(cor)
-# permuted <- matrix(nrow=1000, ncol=4)
-# for(i in 1:1000){
-#   permuted_data <- apply(seedlings_hbt[, c("LogThough", "LogThick", "SLA", "LDMC")],2,sample)
-#   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
-# }
-# thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
-# print(eigen$values)
-# print(thresholds)
-
-pca_sdlng <- principal(seedlings_hbt[, c("StdThough", "StdThick", "StdSLA", "StdLDMC")], nfactor = 2, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
-
-scores_sdlng <- as.data.frame(pca_sdlng$scores)
-scores_sdlng$Treatment3 <- seedlings_hbt$Treatment3
-scores_sdlng$Species_name <- seedlings_hbt$Species_name
-scores_sdlng <- scores_sdlng %>% dplyr::select(Species_name, Treatment3, RC1, RC2)
-
-scores_sdlng$Treatment3 <-  factor(scores_sdlng$Treatment3,
-                                levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
 
 #### Functional diversity ####
 
@@ -480,60 +353,6 @@ FD_nf <- orig_nf %>%
     .groups = "drop"
   ) 
 
-#### Seeds
-
-orig_seeds <- originality(seeds_plot, scores_seeds)
-
-TD_seeds <- seeds %>%
-  rename(Species_name = plant_species) %>%
-  group_by(Plot_ID) %>%
-  summarise(AbSeeds = n(),
-            RichSeeds = n_distinct(Species_name),
-            .groups = "drop")
-Shn_seeds <- seeds %>%
-  rename(Species_name = plant_species) %>%
-  count(Plot_ID, Species_name) %>%
-  group_by(Plot_ID) %>%
-  summarise(ShnSeeds = diversity(n, index = "shannon"),
-            .groups = "drop")
-
-
-FD_seeds <- orig_seeds %>%
-  group_by(Plot_ID) %>%
-  summarise(
-    FDSeeds = mean(orig),
-    FC1Seeds = mean(RC1),
-    FC2Seeds = mean(RC2),
-    .groups = "drop"
-  ) 
-
-
-#### Seedlings
-
-orig_sdlngs <- originality(seedlings_plot, scores_sdlng)
-
-TD_sdlngs <- seedlings %>%
-  group_by(Plot_ID) %>%
-  summarise(AbSdlng = n(),
-            RichSdlng = n_distinct(Species_name),
-            .groups = "drop")
-Shn_sdlngs <- seedlings %>%
-  count(Plot_ID, Species_name) %>%
-  group_by(Plot_ID) %>%
-  summarise(ShnSdlng = diversity(n, index = "shannon"),
-            .groups = "drop")
-
-
-FD_sdlngs <- orig_sdlngs %>%
-  group_by(Plot_ID) %>%
-  summarise(
-    FDSdlng = mean(orig),
-    FC1Sdlng = mean(RC1),
-    FC2Sdlng = mean(RC2),
-    .groups = "drop"
-  ) 
-
-
 #### Explanatory variables (recovery time, forest structure and connectivity) ####
 
 expl <- read.csv(file = "data/processed/env_variables.csv")
@@ -598,67 +417,16 @@ con_idx$Plot_ID <- expl_con$Plot_ID
 
 con_idx <- con_idx %>% rename(ConIndex = PC1) %>% select(Plot_ID, ConIndex)
 
-## Forest structure
-
-expl_str <- expl %>% select(Plot_ID, PREX, Treatment3, VerticalVH, Max_tree_height, AGB_wild)
-str(expl_str)
-
-# hist(exp(expl_str$VerticalVH))
-# hist((expl_str$Max_tree_height))
-# hist(log1p(expl_str$AGB_wild))
-
-strc <- expl_str %>%
-  mutate(
-    t_vvh = exp(VerticalVH),
-    t_agb = log1p(AGB_wild),
-    Std_vvh = scale(exp(VerticalVH)),
-    Std_mth = scale((Max_tree_height)),
-    Std_agb = scale(log1p(AGB_wild))
-  )
-
-# Number of components to be used:
-# cor <- cor.smooth(strc[, c("t_vvh", "Max_tree_height", "t_agb")])
-# eigen <- eigen(cor)
-# permuted <- matrix(nrow=1000, ncol=3)
-# for(i in 1:1000){
-#   permuted_data <- apply(strc[, c("t_vvh", "Max_tree_height", "t_agb")],2,sample)
-#   permuted[i,] <- eigen(cor.smooth(permuted_data))$values
-# }
-# thresholds <- apply(permuted, 2, function(x) quantile(x, 0.95))
-# print(eigen$values)
-# print(thresholds)
-
-str_pca <- principal(strc[, c("Std_vvh", "Std_mth", "Std_agb")], nfactor = 1, scores = TRUE, rotate = "varimax", covar = FALSE, missing = TRUE, use = "pairwise")
-
-str_idx <- as.data.frame(str_pca$scores)
-str_idx$Plot_ID <- strc$Plot_ID
-
-str_idx <- str_idx %>% rename(StrIndex = PC1) %>% select(Plot_ID, StrIndex)
-
-
 #### Final data frame ####
 
 model_df <- expl %>% select(Treatment3, Plot_ID, RegTime) %>%
   left_join(con_idx, by = "Plot_ID") %>%
-  left_join(str_idx, by = "Plot_ID") %>%
   left_join(FD_bees, by = "Plot_ID") %>%
   left_join(FD_moths, by = "Plot_ID") %>%
   left_join(FD_bat_pol, by = "Plot_ID") %>%
   left_join(FD_bats, by = "Plot_ID") %>%
   left_join(FD_birds, by = "Plot_ID") %>%
-  left_join(FD_nf, by = "Plot_ID") %>%
-  left_join(FD_seeds, by = "Plot_ID") %>%
-  left_join(TD_seeds, by = "Plot_ID") %>%
-  left_join(Shn_seeds, by = "Plot_ID") %>%
-  left_join(FD_sdlngs, by = "Plot_ID") %>%
-  left_join(TD_sdlngs, by = "Plot_ID") %>%
-  left_join(Shn_sdlngs, by = "Plot_ID") %>%
-  mutate(
-    across(
-      c(AbSdlng, RichSdlng, ShnSdlng),
-      ~ tidyr::replace_na(.x, 0)
-    )
-  )
+  left_join(FD_nf, by = "Plot_ID") 
 
 str(model_df)
 

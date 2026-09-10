@@ -1,3 +1,9 @@
+library(ggplot2)
+library(qgraph)
+library(patchwork)
+
+if (!dir.exists("output/Figures")) dir.create("output/Figures", recursive = TRUE)
+
 ##### Trait spaces ####
 
 scores_pol <- readRDS("output/scores_processes.RDS")[[1]]
@@ -39,19 +45,17 @@ ts_pol <- ggplot(scores_pol, aes(x = RC1, y = RC2, color=group)) +
                     labels = c("Bats", "Bees", "Moths")) +
   # geom_point(data = centroids_pol, aes(x = RC1, y = RC2, fill = group), 
   #            size = 5, shape = 23, color = "black", stroke = 1) +
-  # geom_segment(data = as.data.frame(pca_pol$loadings[,1:2] * 3), aes(x = 0, y = 0, xend = RC1, yend = RC2),
-  #              arrow = arrow(), color = "black", linewidth = 1) +
-  # geom_text(data = as.data.frame(pca_pol$loadings[, 1:2] * 3), aes(label = c("ProbLength", "CorolLength", "WingSize",  "Height"),
-  #                                                                  x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
-  # coord_fixed(ratio = 1) +
+  geom_segment(data = as.data.frame(pca_pol$loadings[,1:2] * 3), aes(x = 0, y = 0, xend = RC1, yend = RC2),
+               arrow = arrow(), color = "black", linewidth = 1) +
+  geom_text(data = as.data.frame(pca_pol$loadings[, 1:2] * 3), aes(label = c("ProbLength", "CorolLength", "WingSize",  "Height"),
+                                                                   x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
   theme_manuscript +
   ggtitle("A) Pollination") +
-  # theme_classic() +
-  # theme(legend.text = element_text(size=16),
-  #       legend.position = "none",
-  #       axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20),
-  #       # axis.title = element_blank()
-  # ) +
+  theme(legend.text = element_text(size=16),
+        legend.position = "none",
+        axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20),
+        # axis.title = element_blank()
+  ) +
   scale_x_continuous(limits = c(floor(range(scores_pol$RC1)[1]), ceiling(range(scores_pol$RC1)[2]))) +
   scale_y_continuous(limits = c(floor(range(scores_pol$RC2)[1]), ceiling(range(scores_pol$RC2)[2]))) +
   labs(x = paste("Trait axis 1 (", round(pca_pol$Vaccounted[2,1]*100, 2), "%)", sep = ""),
@@ -89,24 +93,22 @@ ts_sd <- ggplot(scores_sd, aes(x = RC1, y = RC2, color=group)) +
                                'Birds' =  "#7bccc4",
                                'NF' = "#bdd7e7"),
                     labels = c("Bats", "Birds", "Non-flying/nmammals")) +
-  # geom_point(data = centroids_sd, aes(x = RC1, y = RC2, fill = group), 
+  # geom_point(data = centroids_sd, aes(x = RC1, y = RC2, fill = group),
   #            size = 5, shape = 23, color = "black", stroke = 1) +
-  # geom_segment(data = as.data.frame(pca_sd$loadings[,1:2] * 3), aes(x = 0, y = 0, xend = RC1, yend = RC2),
-  #              arrow = arrow(), color = "black", linewidth = 1) +
-  # geom_text(data = as.data.frame(pca_sd$loadings[, 1:2] * 3), aes(label = c("BodyMass", "CropMass", "GapeWidth", "FruitWidth", "HandWingIndex", "Height"),
-  #                                                                 x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
-  # coord_fixed(ratio = 1) +
+  geom_segment(data = as.data.frame(pca_sd$loadings[,1:2] * 3), aes(x = 0, y = 0, xend = RC1, yend = RC2),
+               arrow = arrow(), color = "black", linewidth = 1) +
+  geom_text(data = as.data.frame(pca_sd$loadings[, 1:2] * 3), aes(label = c("BodyMass", "CropMass", "GapeWidth", "FruitWidth", "HandWingIndex", "Height"),
+                                                                  x = RC1, y = RC2), color = "black", size = 4, vjust = -1, hjust = 0.2, fontface = "bold") +
   theme_manuscript +
-  # theme_classic(base_size = 16) +
-  # theme(legend.text = element_text(size=16),
-  #       axis.title = element_text(size=16),,
-  #       plot.title = element_text(face = "bold", hjust = 0),
-  #       legend.position = "none",
-  #       axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20),
-  #       plot.margin = margin(10, 5, 10, 10),
-  #       axis.ticks.length = unit(-0.15, "cm")
-  #       # axis.title = element_blank()
-  # ) +
+  theme(legend.text = element_text(size=16),
+        axis.title = element_text(size=16),,
+        plot.title = element_text(face = "bold", hjust = 0),
+        legend.position = "none",
+        axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20),
+        plot.margin = margin(10, 5, 10, 10),
+        axis.ticks.length = unit(-0.15, "cm")
+        # axis.title = element_blank()
+  ) +
   ggtitle("B) Seed dispersal") +
   scale_x_continuous(limits = c(floor(range(scores_sd$RC1)[1]), ceiling(range(scores_sd$RC1)[2]))) +
   scale_y_continuous(limits = c(floor(range(scores_sd$RC2)[1]), ceiling(range(scores_sd$RC2)[2]))) +
@@ -189,7 +191,7 @@ ts_sd <- ggplot(scores_sd, aes(x = RC1, y = RC2, color = group)) +
   labs(x = paste("Trait axis 1 (", round(pca_sd$Vaccounted[2,1]*100, 2), "%)", sep = ""),
        y = paste("Trait axis 2 (", round(pca_sd$Vaccounted[2,2]*100, 2), "%)", sep = ""))
 
-ts <- ts_pol / ts_sd  # stacked (2 rows x 3 cols each), or use ts_pol + ts_sd for side by side with plot_layout(ncol=1)
+ts <- ts_pol / ts_sd  
 
 svg("output/Figures/Figure_trait_spaces_per_stage.svg", width = 13, height = 9)
 ts

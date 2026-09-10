@@ -1,5 +1,14 @@
 #### Priors sanity check
 
+data <- read.csv("data/processed/model_df.csv")
+data$type <- factor(ifelse(1:nrow(data) %in% grep("OG", data$Plot_ID), "old", "rec"),
+                    levels = c("old", "rec"))
+
+dataSub <- subset(data, select = c(type, RegTime, ConIndex,  
+                                   FDBees, FDMoths,  FDBat_pol, 
+                                   FDBats, FDBirds, FDNf
+)) 
+
 variable_rec <- colnames(dataSub)[-c(1:3)]
 group_index <- 14
 
@@ -131,3 +140,4 @@ lambda <- exp(alpha + beta * conn)
 T90 <- log(10) / lambda
 
 quantile(T90, c(.05,.1,.25,.5,.75,.9,.95))
+

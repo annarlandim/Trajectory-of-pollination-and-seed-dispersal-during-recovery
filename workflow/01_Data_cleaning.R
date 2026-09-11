@@ -716,7 +716,7 @@ write.csv(traits_bat, file = here::here("data", "processed","traits_bats.csv"), 
 write.csv(traits_nf, file = here::here("data", "processed", "traits_nf.csv"), row.names = F)
 write.csv(all_traits_plants, file = here::here("data", "processed", "traits_plants.csv"), row.names = F)
 
-#### Vegetation structure ####
+#### Connectivity ####
 
 con <- read.csv("data/raw/Felicity_data.csv")
 

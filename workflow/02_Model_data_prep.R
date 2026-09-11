@@ -61,7 +61,7 @@ weights_df_sd <- data.frame( index = 4:6,
 
 weights_df <- bind_rows(weights_df_pol, weights_df_sd)
 
-# write.csv(weights_df, file = here::here("data", "processed", "weights_df.csv"), row.names = F)
+write.csv(weights_df, file = here::here("data", "processed", "weights_df.csv"), row.names = F)
 
 #### Pollination 
 
@@ -285,6 +285,11 @@ scores_sd <- scores_sd %>% dplyr::select(group, interaction, Treatment3, RC1, RC
 scores_sd$Treatment3 <-  factor(scores_sd$Treatment3,
                                   levels = c('old-growth forest', 'regeneration late', 'regeneration early'))
 
+pca_processes <- list(pca_pol, pca_sd)
+scores_processes <- list(scores_pol, scores_sd)
+saveRDS(pca_processes, file = "output/pca_processes.RDS")
+saveRDS(scores_processes, file = "output/scores_processes.RDS")
+
 #### Functional diversity ####
 
 #### Pollination
@@ -430,4 +435,4 @@ model_df <- expl %>% select(Treatment3, Plot_ID, RegTime) %>%
 
 str(model_df)
 
-# write.csv(model_df, file = here::here("data", "processed", "model_df.csv"), row.names = F)
+write.csv(model_df, file = here::here("data", "processed", "model_df.csv"), row.names = F)
